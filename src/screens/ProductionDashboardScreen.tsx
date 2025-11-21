@@ -49,14 +49,18 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     machineId,
     start,
     end,
-    modes: ['OEE', 'goodparts', 'rejectparts', 'downtime'],
+    modes: ['goodparts', 'rejectparts'], // Temporarily remove OEE and downtime to test
     timeBase: 'hour',
   });
 
   
   // Transform API data to chart format
   const chartData = useMemo(() => {
+    console.log('📊 Chart Data - productionData length:', productionData?.length || 0);
+    console.log('📊 Chart Data - productionData:', JSON.stringify(productionData));
+    
     if (!productionData || productionData.length === 0) {
+      console.log('⚠️ No production data available, using mock data');
       // Fallback mock data if API returns nothing
       return [
         { hour: '18:00', goodparts: 45, rejectparts: 5, downtimeMinutes: 55, goalMinutes: 60 },
@@ -69,9 +73,11 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
       ];
     }
 
-    console.log('📊 Transforming chart data, sample point:', JSON.stringify(productionData[0]));
+    console.log('✅ Using real API data for chart');
+    console.log('📊 Transforming chart data, total points:', productionData.length);
+    console.log('📊 Sample point:', JSON.stringify(productionData[0]));
 
-    return productionData.map(point => {
+    const transformed = productionData.map(point => {
       const date = new Date(point.timestamp);
       const hours = date.getHours().toString().padStart(2, '0');
       const minutes = date.getMinutes().toString().padStart(2, '0');
@@ -85,6 +91,9 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         goalMinutes: 60,
       };
     });
+    
+    console.log('📊 Transformed chart data:', JSON.stringify(transformed));
+    return transformed;
   }, [productionData]);
 
   // Transform API data to table rows

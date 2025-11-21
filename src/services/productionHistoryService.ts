@@ -108,13 +108,25 @@ export async function getProductionHistory(
     // Make API request
     const response = await authApiClient.get<ProductionHistoryResponse[]>(endpoint);
 
-    console.log('✅ Production history response:', response.data.length, 'data points');
+    console.log('✅ Production history response received');
+    console.log('📊 Response data length:', response.data.length);
+    console.log('📊 Full response:', JSON.stringify(response.data, null, 2));
+    
     if (response.data.length > 0) {
-      console.log('📊 Sample response item:', JSON.stringify(response.data[0]));
+      console.log('📊 First item Key:', response.data[0].Key);
+      console.log('📊 First item History length:', response.data[0].History?.length || 0);
+      if (response.data[0].History && response.data[0].History.length > 0) {
+        console.log('📊 First history point:', JSON.stringify(response.data[0].History[0]));
+      }
     }
 
     // Transform the response into ProductionPoint[]
-    return transformApiResponse(response.data);
+    const transformed = transformApiResponse(response.data);
+    console.log('📊 Transformed to', transformed.length, 'production points');
+    if (transformed.length > 0) {
+      console.log('📊 First transformed point:', JSON.stringify(transformed[0]));
+    }
+    return transformed;
   } catch (error: any) {
     console.error('❌ Production history error:', {
       message: error.message,
