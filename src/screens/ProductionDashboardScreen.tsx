@@ -49,7 +49,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     machineId,
     start,
     end,
-    modes: ['goodparts', 'rejectparts'], // Temporarily remove OEE and downtime to test
+    modes: ['goodparts', 'rejectparts', 'downtime'],
     timeBase: 'hour',
   });
 

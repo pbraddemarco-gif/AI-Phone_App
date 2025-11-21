@@ -5,14 +5,26 @@
 
 import { authApiClient } from './apiClient';
 
-export type ProductionMode = 'OEE' | 'goodparts' | 'rejectparts' | 'downtime';
+export type ProductionMode = 
+  | 'goodparts' 
+  | 'rejectparts' 
+  | 'totalparts' 
+  | 'failureparts' 
+  | 'downtime' 
+  | 'uptime' 
+  | 'alarm' 
+  | 'OEE' 
+  | 'availability' 
+  | 'performance' 
+  | 'quality';
 
 /**
  * API response structure for production history
  */
 export interface ProductionHistoryResponse {
+  History: HistoryDataPoint[];
   Id: number;
-  Key: string; // Mode: "OEE", "goodparts", "rejectparts"
+  Key: string; // Mode: "OEE", "goodparts", "rejectparts", "downtime", etc.
   ShortName: string | null;
   ItemOwner: string | null;
   ItemOwnerId: number;
@@ -20,16 +32,16 @@ export interface ProductionHistoryResponse {
   Description: string | null;
   IntervalStart: string; // ISO date
   IntervalEnd: string; // ISO date
-  History: HistoryDataPoint[];
 }
 
 /**
  * Individual data point within History array
  */
 export interface HistoryDataPoint {
-  TimeStamp: string; // ISO date string
+  DateTime: string; // ISO date string
   Value: number; // The actual metric value
-  // Add more fields as discovered from API
+  GroupBy: string | null;
+  GroupId: number | null;
 }
 
 /**
@@ -70,7 +82,7 @@ export async function getProductionHistory(
     machineId,
     start,
     end,
-    modes = ['OEE', 'goodparts', 'rejectparts', 'downtime'],
+    modes = ['goodparts', 'rejectparts', 'downtime'],
     timeBase = 'hour',
     intervalBase = 'hour',
     filter,
@@ -150,7 +162,7 @@ function transformApiResponse(responseData: ProductionHistoryResponse[]): Produc
     const mode = modeData.Key.toLowerCase();
 
     modeData.History.forEach((dataPoint) => {
-      const timestamp = dataPoint.TimeStamp;
+      const timestamp = dataPoint.DateTime;
 
       if (!pointsMap.has(timestamp)) {
         pointsMap.set(timestamp, { timestamp });
