@@ -27,6 +27,7 @@
     "@types/react-dom": "~19.1.7",
     "axios": "^1.13.2",
     "expo": "^54.0.25",
+    "expo-secure-store": "~15.0.7",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",

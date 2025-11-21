@@ -1,56 +1,72 @@
-import axios, { AxiosInstance } from 'axios';
-import { authService } from './authService';
+/**
+ * Axios API client with automatic Bearer token injection
+ * Supports multiple base URLs for different API endpoints
+ */
 
-const baseURL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
+import { getToken, clearToken } from './tokenStorage';
 
+// Primary auth endpoint
+const AUTH_BASE_URL = 'https://app.automationintellect.com/api';
+
+// Secondary data endpoint (existing)
+const DATA_BASE_URL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
+
+/**
+ * Main API client for authenticated requests
+ */
 export const apiClient: AxiosInstance = axios.create({
-  baseURL,
-  timeout: 10000,
+  baseURL: DATA_BASE_URL,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
-apiClient.interceptors.request.use(
-  async (config) => {
-    const token = await authService.getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+/**
+ * Auth API client for authentication endpoints
+ */
+export const authApiClient: AxiosInstance = axios.create({
+  baseURL: AUTH_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
   },
-  (error) => {
-    return Promise.reject(error);
+});
+
+/**
+ * Request interceptor: Inject Bearer token into every request
+ */
+const tokenInterceptor = async (config: InternalAxiosRequestConfig) => {
+  const token = await getToken();
+  
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  
+  return config;
+};
 
-// Response interceptor to handle token refresh
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // If 401 and haven't retried yet, try to refresh token
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const newToken = await authService.refreshAccessToken();
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, user needs to login again
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
+/**
+ * Response interceptor: Handle 401 unauthorized errors
+ */
+const unauthorizedInterceptor = async (error: AxiosError) => {
+  if (error.response?.status === 401) {
+    // Token expired or invalid - clear storage
+    await clearToken();
+    console.warn('Authentication token expired or invalid');
   }
-);
+  return Promise.reject(error);
+};
 
-export async function getExample(): Promise<any> {
-  const response = await apiClient.get('/example');
-  return response.data;
-}
+// Apply interceptors to main API client
+apiClient.interceptors.request.use(tokenInterceptor, (error) => Promise.reject(error));
+apiClient.interceptors.response.use((response) => response, unauthorizedInterceptor);
+
+// Apply interceptors to auth API client
+authApiClient.interceptors.request.use(tokenInterceptor, (error) => Promise.reject(error));
+authApiClient.interceptors.response.use((response) => response, unauthorizedInterceptor);
+
+export { AUTH_BASE_URL, DATA_BASE_URL };
+

@@ -13,6 +13,7 @@ import { BrandLogo } from '../components/BrandLogo';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { authService } from '../services/authService';
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -35,10 +36,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     setError('');
 
     try {
-      // DEVELOPMENT MODE: Skip API call, just navigate
-      // await authService.login(username, password);
+      await authService.login(username, password);
       
-      // For development, accept any credentials
+      // Navigate to main app (Home screen)
       navigation.replace('Home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

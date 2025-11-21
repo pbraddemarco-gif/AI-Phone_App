@@ -1,175 +1,82 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+/**
+ * Authentication Service
+ * Handles OAuth password grant login with form-urlencoded requests
+ */
 
-const AUTH_BASE_URL = 'https://dev1.automationintellect.com/api/accounts';
-const TOKEN_KEY = '@aiq_access_token';
-const REFRESH_TOKEN_KEY = '@aiq_refresh_token';
-const USER_KEY = '@aiq_user';
-const CREDENTIALS_KEY = '@aiq_credentials';
+import axios, { AxiosError } from 'axios';
+import { authApiClient } from './apiClient';
+import { saveToken, saveRefreshToken, getToken, clearToken } from './tokenStorage';
+import type { AuthTokenResponse, LoginCredentials, AuthError } from '../types/auth';
 
-interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  refresh_token: string;
-  account: {
-    id: string;
-    username: string;
-    email: string;
-    [key: string]: any;
-  };
-  client_id: string;
-  '.issued': string;
-  '.expires': string;
-}
-
-interface StoredCredentials {
-  username: string;
-  password: string;
-  client_id: string;
-}
+const AUTH_ENDPOINT = '/accounts/token';
+const CLIENT_ID = 'B9C5132D-83A9-40FF-8B06-A00C53322E01';
 
 class AuthService {
-  private accessToken: string | null = null;
-  private refreshToken: string | null = null;
-
-  async login(username: string, password: string, clientId: string = 'mobile-app'): Promise<void> {
+  /**
+   * Login with username and password using OAuth password grant
+   * Sends application/x-www-form-urlencoded request
+   */
+  async login(username: string, password: string): Promise<AuthTokenResponse> {
     try {
+      // Create form-urlencoded body
       const formData = new URLSearchParams();
       formData.append('grant_type', 'password');
       formData.append('username', username);
       formData.append('password', password);
-      formData.append('client_id', clientId);
-      formData.append('remember_me', 'true');
+      formData.append('client_id', CLIENT_ID);
 
-      const response = await axios.post<AuthResponse>(`${AUTH_BASE_URL}/token`, formData.toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-        },
-      });
+      const response = await authApiClient.post<AuthTokenResponse>(
+        AUTH_ENDPOINT,
+        formData.toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
 
-      const { access_token, refresh_token, account } = response.data;
+      const { access_token, refresh_token } = response.data;
 
-      // Store tokens and user info
-      await AsyncStorage.multiSet([
-        [TOKEN_KEY, access_token],
-        [REFRESH_TOKEN_KEY, refresh_token],
-        [USER_KEY, JSON.stringify(account)],
-        [CREDENTIALS_KEY, JSON.stringify({ username, password, client_id: clientId })],
-      ]);
+      // Save tokens securely
+      await saveToken(access_token);
+      if (refresh_token) {
+        await saveRefreshToken(refresh_token);
+      }
 
-      this.accessToken = access_token;
-      this.refreshToken = refresh_token;
+      return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        const errorData = error.response.data;
-        throw new Error(errorData.error_description || 'Authentication failed');
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<AuthError>;
+        const errorMessage =
+          axiosError.response?.data?.error_description ||
+          axiosError.response?.data?.error ||
+          'Authentication failed';
+        throw new Error(errorMessage);
       }
       throw new Error('Network error. Please check your connection.');
     }
   }
 
-  async refreshAccessToken(): Promise<string> {
-    try {
-      const [storedRefreshToken, storedCredentials] = await AsyncStorage.multiGet([
-        REFRESH_TOKEN_KEY,
-        CREDENTIALS_KEY,
-      ]);
-
-      const refreshToken = storedRefreshToken[1];
-      const credentials: StoredCredentials | null = storedCredentials[1]
-        ? JSON.parse(storedCredentials[1])
-        : null;
-
-      if (!refreshToken || !credentials) {
-        throw new Error('No refresh token available');
-      }
-
-      const formData = new URLSearchParams();
-      formData.append('grant_type', 'refresh_token');
-      formData.append('refresh_token', refreshToken);
-      formData.append('client_id', credentials.client_id);
-      formData.append('remember_me', 'true');
-
-      const response = await axios.post<AuthResponse>(`${AUTH_BASE_URL}/token`, formData.toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-        },
-      });
-
-      const { access_token, refresh_token: new_refresh_token, account } = response.data;
-
-      await AsyncStorage.multiSet([
-        [TOKEN_KEY, access_token],
-        [REFRESH_TOKEN_KEY, new_refresh_token],
-        [USER_KEY, JSON.stringify(account)],
-      ]);
-
-      this.accessToken = access_token;
-      this.refreshToken = new_refresh_token;
-
-      return access_token;
-    } catch (error) {
-      // If refresh fails, clear all auth data
-      await this.logout();
-      throw new Error('Session expired. Please login again.');
-    }
-  }
-
+  /**
+   * Get current access token from storage
+   */
   async getAccessToken(): Promise<string | null> {
-    if (this.accessToken) {
-      return this.accessToken;
-    }
-
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
-    this.accessToken = token;
-    return token;
+    return await getToken();
   }
 
-  async getUserInfo(): Promise<any> {
-    const userJson = await AsyncStorage.getItem(USER_KEY);
-    return userJson ? JSON.parse(userJson) : null;
-  }
-
+  /**
+   * Check if user is authenticated (has valid token)
+   */
   async isAuthenticated(): Promise<boolean> {
-    const token = await this.getAccessToken();
+    const token = await getToken();
     return token !== null;
   }
 
+  /**
+   * Logout user and clear all tokens
+   */
   async logout(): Promise<void> {
-    try {
-      const token = await this.getAccessToken();
-      const user = await this.getUserInfo();
-
-      if (token && user?.id) {
-        // Call logout endpoint
-        await axios.post(
-          `${AUTH_BASE_URL}/${user.id}/logout`,
-          {},
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json',
-            },
-          }
-        ).catch(() => {
-          // Ignore logout errors
-        });
-      }
-    } finally {
-      // Clear all stored data
-      await AsyncStorage.multiRemove([
-        TOKEN_KEY,
-        REFRESH_TOKEN_KEY,
-        USER_KEY,
-        CREDENTIALS_KEY,
-      ]);
-
-      this.accessToken = null;
-      this.refreshToken = null;
-    }
+    await clearToken();
   }
 }
 
