@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -48,19 +49,26 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.primary }]} // dark primary background
+      style={[styles.container, { backgroundColor: theme.colors.backgroundDark }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={[styles.title, { color: theme.colors.primary }]}>
-          AutomationIntellect
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-          Log in to your account
-        </Text>
-
+        <Image
+          source={require('../../assets/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={[styles.title, { color: theme.colors.accent }]}>AutomationIntellect</Text>
+        <Text style={[styles.subtitle, { color: theme.colors.textInverse }]}>Log in to your account</Text>
         <TextInput
-          style={[styles.input, { borderColor: theme.colors.accent, color: theme.colors.textInverse, backgroundColor: theme.colors.primaryActive }]}
+          style={[
+            styles.input,
+            {
+              borderColor: theme.colors.accent,
+              color: theme.colors.textInverse,
+              backgroundColor: theme.colors.primaryActive,
+            },
+          ]}
           placeholder="Username"
           placeholderTextColor={theme.colors.neutralText}
           value={username}
@@ -69,9 +77,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           autoCorrect={false}
           editable={!isLoading}
         />
-
         <TextInput
-          style={[styles.input, { borderColor: theme.colors.accent, color: theme.colors.textInverse, backgroundColor: theme.colors.primaryActive }]}
+          style={[
+            styles.input,
+            {
+              borderColor: theme.colors.accent,
+              color: theme.colors.textInverse,
+              backgroundColor: theme.colors.primaryActive,
+            },
+          ]}
           placeholder="Password"
           placeholderTextColor={theme.colors.neutralText}
           value={password}
@@ -82,11 +96,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           editable={!isLoading}
           onSubmitEditing={handleLogin}
         />
-
-        {error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : null}
-
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <TouchableOpacity
           style={[
             styles.button,
@@ -115,6 +125,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 32,
+  },
+  logo: {
+    width: 140,
+    height: 140,
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   title: {
     fontSize: 28,

@@ -14,6 +14,7 @@ export const theme = {
 
     // Backgrounds & surfaces
     background: '#ffffff',         // Page background
+    backgroundDark: '#000000',     // Full dark background (login screen)
     backgroundAlt: '#d0d0d0',      // Sub-surface / subtle filled elements
     backgroundNeutral: 'hsla(0,0%,82%,0.3)', // Neutral translucent surface
     highlightBg: 'rgba(188,232,241,0.3)',    // Highlight background
