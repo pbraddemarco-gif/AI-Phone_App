@@ -54,7 +54,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     >
       <View style={styles.content}>
         <Image
-          source={require('../../assets/logo.png')}
+          source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oUdXGgAAAAASUVORK5CYII=' }}
           style={styles.logo}
           resizeMode="contain"
         />
