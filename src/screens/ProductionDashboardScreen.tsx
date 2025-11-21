@@ -49,7 +49,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     machineId,
     start,
     end,
-    modes: ['OEE', 'goodparts', 'rejectparts'],
+    modes: ['OEE', 'goodparts', 'rejectparts', 'downtime'],
     timeBase: 'hour',
   });
 
@@ -59,22 +59,32 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     if (!productionData || productionData.length === 0) {
       // Fallback mock data if API returns nothing
       return [
-        { hour: '18:00', goodparts: 45, downtimeMinutes: 55, goalMinutes: 60 },
-        { hour: '19:00', goodparts: 60, downtimeMinutes: 40, goalMinutes: 60 },
-        { hour: '20:00', goodparts: 50, downtimeMinutes: 50, goalMinutes: 60 },
-        { hour: '21:00', goodparts: 55, downtimeMinutes: 45, goalMinutes: 60 },
-        { hour: '22:00', goodparts: 65, downtimeMinutes: 60, goalMinutes: 60 },
-        { hour: '23:00', goodparts: 50, downtimeMinutes: 55, goalMinutes: 60 },
-        { hour: '00:00', goodparts: 40, downtimeMinutes: 45, goalMinutes: 60 },
+        { hour: '18:00', goodparts: 45, rejectparts: 5, downtimeMinutes: 55, goalMinutes: 60 },
+        { hour: '19:00', goodparts: 60, rejectparts: 3, downtimeMinutes: 40, goalMinutes: 60 },
+        { hour: '20:00', goodparts: 50, rejectparts: 4, downtimeMinutes: 50, goalMinutes: 60 },
+        { hour: '21:00', goodparts: 55, rejectparts: 2, downtimeMinutes: 45, goalMinutes: 60 },
+        { hour: '22:00', goodparts: 65, rejectparts: 6, downtimeMinutes: 60, goalMinutes: 60 },
+        { hour: '23:00', goodparts: 50, rejectparts: 3, downtimeMinutes: 55, goalMinutes: 60 },
+        { hour: '00:00', goodparts: 40, rejectparts: 4, downtimeMinutes: 45, goalMinutes: 60 },
       ];
     }
 
-    return productionData.map(point => ({
-      hour: point.timestamp.split('T')[1]?.substring(0, 5) || point.timestamp,
-      goodparts: point.goodParts || 0,
-      downtimeMinutes: 0, // TODO: Map from API response
-      goalMinutes: 60, // TODO: Map from API response
-    }));
+    console.log('📊 Transforming chart data, sample point:', JSON.stringify(productionData[0]));
+
+    return productionData.map(point => {
+      const date = new Date(point.timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const timeLabel = `${hours}:${minutes}`;
+
+      return {
+        hour: timeLabel,
+        goodparts: point.goodParts || 0,
+        rejectparts: point.rejectParts || 0,
+        downtimeMinutes: point.downtime || 0,
+        goalMinutes: 60,
+      };
+    });
   }, [productionData]);
 
   // Transform API data to table rows
@@ -106,11 +116,14 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
       const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
       const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
       
+      const downtimeMinutes = point.downtime || 0;
+      const downtimeDisplay = downtimeMinutes > 0 ? `${Math.round(downtimeMinutes)}m` : '-';
+      
       return {
         dateHour: `${dateStr} - ${timeStr}`,
         status: point.goodParts?.toString() || '-',
-        machineStatus: '-', // TODO: Map from API response
-        manualDowntime: '-', // TODO: Map from API response
+        machineStatus: downtimeDisplay,
+        manualDowntime: '-',
         co: point.goodParts || 0,
         scrap: point.rejectParts || 0,
       };
@@ -196,16 +209,16 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         {/* Legend */}
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: theme.colors.accentAlt }]} />
-            <Text style={styles.legendLabel}>Goodparts</Text>
+            <View style={[styles.legendSwatch, { backgroundColor: '#16a34a' }]} />
+            <Text style={styles.legendLabel}>Good Parts</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: theme.colors.warning }]} />
-            <Text style={styles.legendLabel}>Downtime</Text>
+            <View style={[styles.legendSwatch, { backgroundColor: '#ef4444' }]} />
+            <Text style={styles.legendLabel}>Scrap</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: theme.colors.accent }]} />
-            <Text style={styles.legendLabel}>Production Goal</Text>
+            <View style={[styles.legendSwatch, { backgroundColor: '#facc15' }]} />
+            <Text style={styles.legendLabel}>Downtime (min)</Text>
           </View>
         </View>
 

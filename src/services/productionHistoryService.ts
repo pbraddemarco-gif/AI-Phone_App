@@ -5,22 +5,42 @@
 
 import { authApiClient } from './apiClient';
 
-export type ProductionMode = 'OEE' | 'goodparts' | 'rejectparts';
+export type ProductionMode = 'OEE' | 'goodparts' | 'rejectparts' | 'downtime';
 
 /**
- * Single production data point for a time bucket
- * TODO: Adjust fields based on actual API response shape
+ * API response structure for production history
+ */
+export interface ProductionHistoryResponse {
+  Id: number;
+  Key: string; // Mode: "OEE", "goodparts", "rejectparts"
+  ShortName: string | null;
+  ItemOwner: string | null;
+  ItemOwnerId: number;
+  TimeBase: string;
+  Description: string | null;
+  IntervalStart: string; // ISO date
+  IntervalEnd: string; // ISO date
+  History: HistoryDataPoint[];
+}
+
+/**
+ * Individual data point within History array
+ */
+export interface HistoryDataPoint {
+  TimeStamp: string; // ISO date string
+  Value: number; // The actual metric value
+  // Add more fields as discovered from API
+}
+
+/**
+ * Transformed production data point for UI consumption
  */
 export interface ProductionPoint {
-  timestamp: string; // ISO date string or time label (e.g., "2025-11-21T14:00:00" or "14:00")
-  oee?: number; // Overall Equipment Effectiveness percentage
-  goodParts?: number; // Count of good parts produced
-  rejectParts?: number; // Count of rejected parts
-  // Add more fields as needed based on API response:
-  // downtime?: number;
-  // availability?: number;
-  // performance?: number;
-  // quality?: number;
+  timestamp: string; // ISO date string
+  oee?: number;
+  goodParts?: number;
+  rejectParts?: number;
+  downtime?: number; // Downtime in minutes
 }
 
 /**
@@ -50,7 +70,7 @@ export async function getProductionHistory(
     machineId,
     start,
     end,
-    modes = ['OEE', 'goodparts', 'rejectparts'],
+    modes = ['OEE', 'goodparts', 'rejectparts', 'downtime'],
     timeBase = 'hour',
     intervalBase = 'hour',
     filter,
@@ -81,10 +101,67 @@ export async function getProductionHistory(
     queryParams.append('filter', filter);
   }
 
-  // Make API request
-  const response = await authApiClient.get<ProductionPoint[]>(
-    `/machines/${machineId}/productionhistory?${queryParams.toString()}`
-  );
+  const endpoint = `/machines/${machineId}/productionhistory?${queryParams.toString()}`;
+  console.log('📊 Fetching production history:', endpoint);
 
-  return response.data;
+  try {
+    // Make API request
+    const response = await authApiClient.get<ProductionHistoryResponse[]>(endpoint);
+
+    console.log('✅ Production history response:', response.data.length, 'data points');
+    if (response.data.length > 0) {
+      console.log('📊 Sample response item:', JSON.stringify(response.data[0]));
+    }
+
+    // Transform the response into ProductionPoint[]
+    return transformApiResponse(response.data);
+  } catch (error: any) {
+    console.error('❌ Production history error:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Transform API response to ProductionPoint array
+ */
+function transformApiResponse(responseData: ProductionHistoryResponse[]): ProductionPoint[] {
+  // Group by timestamp
+  const pointsMap = new Map<string, ProductionPoint>();
+
+  responseData.forEach((modeData) => {
+    const mode = modeData.Key.toLowerCase();
+
+    modeData.History.forEach((dataPoint) => {
+      const timestamp = dataPoint.TimeStamp;
+
+      if (!pointsMap.has(timestamp)) {
+        pointsMap.set(timestamp, { timestamp });
+      }
+
+      const point = pointsMap.get(timestamp)!;
+
+      // Map the mode to the appropriate field
+      if (mode === 'oee') {
+        point.oee = dataPoint.Value;
+      } else if (mode === 'goodparts') {
+        point.goodParts = dataPoint.Value;
+      } else if (mode === 'rejectparts') {
+        point.rejectParts = dataPoint.Value;
+      } else if (mode === 'downtime') {
+        point.downtime = dataPoint.Value;
+      }
+    });
+  });
+
+  // Convert map to array and sort by timestamp
+  const points = Array.from(pointsMap.values());
+  points.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  return points;
 }

@@ -5,6 +5,7 @@ import { LineChart } from 'react-native-chart-kit';
 interface ProductionPoint {
   hour: string;
   goodparts: number;
+  rejectparts: number;
   downtimeMinutes: number;
   goalMinutes: number;
 }
@@ -25,17 +26,17 @@ export const ProductionChart: React.FC<ProductionChartProps> = ({ data }) => {
         strokeWidth: 2,
       },
       {
+        data: data.map((d) => d.rejectparts),
+        color: () => '#ef4444', // red
+        strokeWidth: 2,
+      },
+      {
         data: data.map((d) => d.downtimeMinutes),
         color: () => '#facc15', // yellow
         strokeWidth: 2,
       },
-      {
-        data: data.map((d) => d.goalMinutes),
-        color: () => '#0ea5e9', // blue
-        strokeWidth: 2,
-      },
     ],
-    legend: ['Good Parts', 'Downtime', 'Goal'],
+    legend: ['Good Parts', 'Scrap', 'Downtime (min)'],
   };
 
   return (

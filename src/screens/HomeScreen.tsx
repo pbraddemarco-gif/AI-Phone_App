@@ -16,6 +16,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         onPress={() => navigation.navigate('ProductionDashboard')}
       />
       <CommonButton
+        label="Shift Comparison"
+        onPress={() => navigation.navigate('MachineShiftComparison', { machineId: 775 })}
+      />
+      <CommonButton
         label="Go to Details"
         onPress={() => navigation.navigate('Details', { itemId: '123' })}
       />

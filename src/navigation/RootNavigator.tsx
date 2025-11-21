@@ -10,6 +10,7 @@ import { AuthNavigator } from './AuthNavigator';
 import HomeScreen from '../screens/HomeScreen';
 import DetailsScreen from '../screens/DetailsScreen';
 import ProductionDashboardScreen from '../screens/ProductionDashboardScreen';
+import { MachineShiftComparisonScreen } from '../screens/MachineShiftComparisonScreen';
 import { RootStackParamList } from '../types/navigation';
 import { authService } from '../services/authService';
 
@@ -59,6 +60,11 @@ export default function RootNavigator() {
             name="ProductionDashboard"
             component={ProductionDashboardScreen}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MachineShiftComparison"
+            component={MachineShiftComparisonScreen}
+            options={{ title: 'Shift Comparison' }}
           />
           <Stack.Screen name="Details" component={DetailsScreen} options={{ title: 'Details' }} />
         </>
