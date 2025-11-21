@@ -35,7 +35,10 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     setError('');
 
     try {
-      await authService.login(username, password);
+      // DEVELOPMENT MODE: Skip API call, just navigate
+      // await authService.login(username, password);
+      
+      // For development, accept any credentials
       navigation.replace('Home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
