@@ -30,9 +30,7 @@ export default function TimeRangeSelector({
             styles.option,
             {
               backgroundColor:
-                selectedRange === option.type
-                  ? theme.colors.primary
-                  : theme.colors.background,
+                selectedRange === option.type ? theme.colors.primary : theme.colors.background,
               borderColor: theme.colors.primary,
             },
           ]}
@@ -42,10 +40,7 @@ export default function TimeRangeSelector({
             style={[
               styles.optionText,
               {
-                color:
-                  selectedRange === option.type
-                    ? '#FFF'
-                    : theme.colors.text,
+                color: selectedRange === option.type ? '#FFF' : theme.colors.text,
               },
             ]}
           >

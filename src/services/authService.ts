@@ -18,6 +18,13 @@ class AuthService {
    */
   async login(username: string, password: string): Promise<AuthTokenResponse> {
     try {
+      console.log('🔐 Login attempt starting...');
+      console.log('Username:', username);
+
+      const AUTH_URL = 'https://app.automationintellect.com/api/accounts/token';
+      console.log('API Endpoint:', AUTH_URL);
+      console.log('Client ID:', CLIENT_ID);
+
       // Create form-urlencoded body
       const formData = new URLSearchParams();
       formData.append('grant_type', 'password');
@@ -25,33 +32,54 @@ class AuthService {
       formData.append('password', password);
       formData.append('client_id', CLIENT_ID);
 
-      const response = await authApiClient.post<AuthTokenResponse>(
-        AUTH_ENDPOINT,
-        formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
+      console.log(
+        '📤 Form data being sent:',
+        formData.toString().replace(/password=[^&]*/, 'password=***')
       );
+      console.log('📤 Sending login request using fetch API to bypass CORS preflight...');
 
-      const { access_token, refresh_token } = response.data;
+      // Use fetch API with mode: 'cors' to attempt CORS request
+      const response = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
+        mode: 'cors', // Allow CORS
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Response data:', errorData);
+        throw new Error(
+          errorData.error_description || errorData.error || `Login failed (${response.status})`
+        );
+      }
+
+      const data: AuthTokenResponse = await response.json();
+      console.log('✅ Login successful!');
+      console.log('Token received:', data.access_token.substring(0, 20) + '...');
+
+      const { access_token, refresh_token } = data;
 
       // Save tokens securely
       await saveToken(access_token);
+      console.log('💾 Token saved to secure storage');
+
       if (refresh_token) {
         await saveRefreshToken(refresh_token);
+        console.log('💾 Refresh token saved');
       }
 
-      return response.data;
+      return data;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<AuthError>;
-        const errorMessage =
-          axiosError.response?.data?.error_description ||
-          axiosError.response?.data?.error ||
-          'Authentication failed';
-        throw new Error(errorMessage);
+      console.error('❌ Login failed!');
+      console.error('Error details:', error);
+
+      if (error instanceof Error) {
+        throw error;
       }
       throw new Error('Network error. Please check your connection.');
     }

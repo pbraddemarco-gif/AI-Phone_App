@@ -6,7 +6,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { getToken, clearToken } from './tokenStorage';
 
-// Primary auth endpoint
+// Primary auth endpoint - direct URL (CORS must be enabled on server)
 const AUTH_BASE_URL = 'https://app.automationintellect.com/api';
 
 // Secondary data endpoint (existing)
@@ -20,7 +20,7 @@ export const apiClient: AxiosInstance = axios.create({
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
 });
 
@@ -40,11 +40,11 @@ export const authApiClient: AxiosInstance = axios.create({
  */
 const tokenInterceptor = async (config: InternalAxiosRequestConfig) => {
   const token = await getToken();
-  
+
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
+
   return config;
 };
 
@@ -69,4 +69,3 @@ authApiClient.interceptors.request.use(tokenInterceptor, (error) => Promise.reje
 authApiClient.interceptors.response.use((response) => response, unauthorizedInterceptor);
 
 export { AUTH_BASE_URL, DATA_BASE_URL };
-

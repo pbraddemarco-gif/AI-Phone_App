@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { VictoryChart, VictoryBar, VictoryLine, VictoryAxis, VictoryTheme } from 'victory-native';
-import { useAppTheme } from '../hooks/useAppTheme';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 
 interface ProductionPoint {
   hour: string;
@@ -15,36 +14,54 @@ interface ProductionChartProps {
 }
 
 export const ProductionChart: React.FC<ProductionChartProps> = ({ data }) => {
-  const theme = useAppTheme();
+  const screenWidth = Dimensions.get('window').width;
+
+  const chartData = {
+    labels: data.map((d) => d.hour),
+    datasets: [
+      {
+        data: data.map((d) => d.goodparts),
+        color: () => '#16a34a', // green
+        strokeWidth: 2,
+      },
+      {
+        data: data.map((d) => d.downtimeMinutes),
+        color: () => '#facc15', // yellow
+        strokeWidth: 2,
+      },
+      {
+        data: data.map((d) => d.goalMinutes),
+        color: () => '#0ea5e9', // blue
+        strokeWidth: 2,
+      },
+    ],
+    legend: ['Good Parts', 'Downtime', 'Goal'],
+  };
+
   return (
     <View style={styles.wrapper}>
-      <VictoryChart theme={VictoryTheme.material} domainPadding={{ x: 20, y: 20 }}>
-        <VictoryAxis tickFormat={(t: string) => t} style={{ tickLabels: { fontSize: 10 } }} />
-        <VictoryAxis
-          dependentAxis
-          tickFormat={(t: number) => `${t}`}
-          style={{ tickLabels: { fontSize: 10 } }}
-        />
-        <VictoryBar
-          data={data}
-          x="hour"
-          y="goodparts"
-          style={{ data: { fill: '#16a34a' } }}
-          barRatio={0.6}
-        />
-        <VictoryLine
-          data={data}
-          x="hour"
-          y={(d: ProductionPoint) => d.downtimeMinutes}
-          style={{ data: { stroke: '#facc15', strokeWidth: 2 } }}
-        />
-        <VictoryLine
-          data={data}
-          x="hour"
-          y={(d: ProductionPoint) => d.goalMinutes}
-          style={{ data: { stroke: '#0ea5e9', strokeWidth: 2 } }}
-        />
-      </VictoryChart>
+      <LineChart
+        data={chartData}
+        width={screenWidth - 32}
+        height={240}
+        chartConfig={{
+          backgroundColor: '#ffffff',
+          backgroundGradientFrom: '#ffffff',
+          backgroundGradientTo: '#ffffff',
+          decimalPlaces: 0,
+          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+          style: {
+            borderRadius: 16,
+          },
+          propsForDots: {
+            r: '4',
+            strokeWidth: '2',
+          },
+        }}
+        bezier
+        style={styles.chart}
+      />
     </View>
   );
 };
@@ -52,6 +69,10 @@ export const ProductionChart: React.FC<ProductionChartProps> = ({ data }) => {
 const styles = StyleSheet.create({
   wrapper: {
     height: 240,
-    paddingVertical: 4
-  }
+    paddingVertical: 4,
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
 });

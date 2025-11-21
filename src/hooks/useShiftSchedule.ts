@@ -9,10 +9,7 @@ interface UseShiftScheduleResult {
   refresh: () => Promise<void>;
 }
 
-export function useShiftSchedule(
-  machineId: string,
-  mode?: string
-): UseShiftScheduleResult {
+export function useShiftSchedule(machineId: string, mode?: string): UseShiftScheduleResult {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

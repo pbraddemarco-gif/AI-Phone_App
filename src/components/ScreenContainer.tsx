@@ -19,10 +19,10 @@ export default function ScreenContainer({ children, style, ...rest }: ScreenCont
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1
+    flex: 1,
   },
   inner: {
     flex: 1,
-    padding: 16
-  }
+    padding: 16,
+  },
 });

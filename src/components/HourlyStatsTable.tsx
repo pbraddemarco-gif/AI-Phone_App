@@ -18,7 +18,12 @@ interface HourlyStatsTableProps {
 export const HourlyStatsTable: React.FC<HourlyStatsTableProps> = ({ rows }) => {
   const theme = useAppTheme();
   return (
-    <View style={[styles.table, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }] }>
+    <View
+      style={[
+        styles.table,
+        { borderColor: theme.colors.border, backgroundColor: theme.colors.background },
+      ]}
+    >
       <View style={[styles.row, styles.headerRow]}>
         <Text style={[styles.cell, styles.headerCell, { flex: 1.5 }]}></Text>
         <Text style={[styles.cell, styles.headerCell]}>Status</Text>
@@ -32,15 +37,23 @@ export const HourlyStatsTable: React.FC<HourlyStatsTableProps> = ({ rows }) => {
         scrollEnabled={false}
         keyExtractor={(item) => item.dateHour}
         renderItem={({ item, index }) => (
-          <View style={[
-            styles.row,
-            { borderBottomColor: theme.colors.backgroundNeutral },
-            index % 2 === 0 && { backgroundColor: theme.colors.backgroundNeutral }
-          ]}>
-            <Text style={[styles.cell, { flex: 1.5, color: theme.colors.text }]}>{item.dateHour}</Text>
+          <View
+            style={[
+              styles.row,
+              { borderBottomColor: theme.colors.backgroundNeutral },
+              index % 2 === 0 && { backgroundColor: theme.colors.backgroundNeutral },
+            ]}
+          >
+            <Text style={[styles.cell, { flex: 1.5, color: theme.colors.text }]}>
+              {item.dateHour}
+            </Text>
             <Text style={[styles.cell, { color: theme.colors.text }]}>{item.status}</Text>
-            <Text style={[styles.cell, { flex: 1.2, color: theme.colors.text }]}>{item.machineStatus}</Text>
-            <Text style={[styles.cell, { flex: 1.2, color: theme.colors.text }]}>{item.manualDowntime}</Text>
+            <Text style={[styles.cell, { flex: 1.2, color: theme.colors.text }]}>
+              {item.machineStatus}
+            </Text>
+            <Text style={[styles.cell, { flex: 1.2, color: theme.colors.text }]}>
+              {item.manualDowntime}
+            </Text>
             <Text style={[styles.cell, { color: theme.colors.text }]}>{item.co}</Text>
             <Text style={[styles.cell, { color: theme.colors.text }]}>{item.scrap}</Text>
           </View>

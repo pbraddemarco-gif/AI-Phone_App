@@ -12,30 +12,32 @@ export const ShiftTabs: React.FC<ShiftTabsProps> = ({ active, onChange }) => {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.backgroundNeutral }]}>
       <TouchableOpacity
-        style={[
-          styles.tab,
-          active === 'current' && { backgroundColor: theme.colors.accent }
-        ]}
+        style={[styles.tab, active === 'current' && { backgroundColor: theme.colors.accent }]}
         onPress={() => onChange('current')}
       >
-        <Text style={[
-          styles.tabText,
-          { color: theme.colors.text },
-          active === 'current' && { color: theme.colors.textInverse }
-        ]}>Current Shift</Text>
+        <Text
+          style={[
+            styles.tabText,
+            { color: theme.colors.text },
+            active === 'current' && { color: theme.colors.textInverse },
+          ]}
+        >
+          Current Shift
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[
-          styles.tab,
-          active === 'last' && { backgroundColor: theme.colors.accent }
-        ]}
+        style={[styles.tab, active === 'last' && { backgroundColor: theme.colors.accent }]}
         onPress={() => onChange('last')}
       >
-        <Text style={[
-          styles.tabText,
-          { color: theme.colors.text },
-          active === 'last' && { color: theme.colors.textInverse }
-        ]}>Last Shift</Text>
+        <Text
+          style={[
+            styles.tabText,
+            { color: theme.colors.text },
+            active === 'last' && { color: theme.colors.textInverse },
+          ]}
+        >
+          Last Shift
+        </Text>
       </TouchableOpacity>
     </View>
   );

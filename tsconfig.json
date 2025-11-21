@@ -3,10 +3,7 @@
     "target": "ES2021",
     "module": "ESNext",
     "jsx": "react-native",
-    "lib": [
-      "ES2021",
-      "DOM"
-    ],
+    "lib": ["ES2021", "DOM"],
     "moduleResolution": "Node",
     "strict": true,
     "esModuleInterop": true,
@@ -16,20 +13,9 @@
     "noEmit": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "types": [
-      "react",
-      "react-native",
-      "node"
-    ]
+    "types": ["react", "react-native", "node"]
   },
-  "include": [
-    "App.tsx",
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build"
-  ],
+  "include": ["App.tsx", "src"],
+  "exclude": ["node_modules", "dist", "build"],
   "extends": "expo/tsconfig.base"
 }

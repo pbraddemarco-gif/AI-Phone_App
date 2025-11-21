@@ -1,56 +1,135 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { ShiftTabs } from '../components/ShiftTabs';
 import { ProductionChart } from '../components/ProductionChart';
 import { HourlyStatsTable, HourlyStatRow } from '../components/HourlyStatsTable';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { useProductionHistory } from '../hooks/useProductionHistory';
 
-export type ProductionDashboardProps = NativeStackScreenProps<RootStackParamList, 'ProductionDashboard'>;
+export type ProductionDashboardProps = NativeStackScreenProps<
+  RootStackParamList,
+  'ProductionDashboard'
+>;
 
 const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigation }) => {
   const [shiftView, setShiftView] = useState<'current' | 'last'>('current');
   const theme = useAppTheme();
 
-  const chartData = useMemo(
-    () => [
-      { hour: '18:00', goodparts: 45, downtimeMinutes: 55, goalMinutes: 60 },
-      { hour: '19:00', goodparts: 60, downtimeMinutes: 40, goalMinutes: 60 },
-      { hour: '20:00', goodparts: 50, downtimeMinutes: 50, goalMinutes: 60 },
-      { hour: '21:00', goodparts: 55, downtimeMinutes: 45, goalMinutes: 60 },
-      { hour: '22:00', goodparts: 65, downtimeMinutes: 60, goalMinutes: 60 },
-      { hour: '23:00', goodparts: 50, downtimeMinutes: 55, goalMinutes: 60 },
-      { hour: '00:00', goodparts: 40, downtimeMinutes: 45, goalMinutes: 60 },
-    ],
-    [shiftView]
-  );
+  // Machine ID for production data
+  const machineId = 775;
+  
+  // Calculate date range based on shift selection
+  const { start, end } = useMemo(() => {
+    const today = new Date();
+    
+    if (shiftView === 'current') {
+      // Current shift: today
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      return {
+        start: startOfDay.toISOString(),
+        end: endOfDay.toISOString(),
+      };
+    } else {
+      // Last shift: yesterday
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const startOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+      const endOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+      return {
+        start: startOfDay.toISOString(),
+        end: endOfDay.toISOString(),
+      };
+    }
+  }, [shiftView]);
+  
+  const { data: productionData, loading, error, refetch } = useProductionHistory({
+    machineId,
+    start,
+    end,
+    modes: ['OEE', 'goodparts', 'rejectparts'],
+    timeBase: 'hour',
+  });
 
-  const hourlyRows: HourlyStatRow[] = useMemo(
-    () => [
-      { dateHour: '12/16 - 18:00', status: '174', machineStatus: '-', manualDowntime: '-', co: 8, scrap: 8 },
-      { dateHour: '12/16 - 19:00', status: '174', machineStatus: '56m', manualDowntime: '-', co: 8, scrap: 8 },
-      { dateHour: '12/16 - 20:00', status: '174', machineStatus: '56m', manualDowntime: '-', co: 8, scrap: 8 },
-      { dateHour: '12/16 - 21:00', status: '174', machineStatus: '56m', manualDowntime: '-', co: 8, scrap: 8 },
-      { dateHour: '12/16 - 22:00', status: '174', machineStatus: '56m', manualDowntime: '-', co: 8, scrap: 8 },
-      { dateHour: '12/16 - 23:00', status: '174', machineStatus: '56m', manualDowntime: '-', co: 8, scrap: 8 },
-      { dateHour: '13/16 - 00:00', status: '174', machineStatus: '56m', manualDowntime: '-', co: 8, scrap: 8 },
-      { dateHour: '13/16 - 01:00', status: '174', machineStatus: '56m', manualDowntime: '-', co: 8, scrap: 8 },
-    ],
-    [shiftView]
-  );
+  
+  // Transform API data to chart format
+  const chartData = useMemo(() => {
+    if (!productionData || productionData.length === 0) {
+      // Fallback mock data if API returns nothing
+      return [
+        { hour: '18:00', goodparts: 45, downtimeMinutes: 55, goalMinutes: 60 },
+        { hour: '19:00', goodparts: 60, downtimeMinutes: 40, goalMinutes: 60 },
+        { hour: '20:00', goodparts: 50, downtimeMinutes: 50, goalMinutes: 60 },
+        { hour: '21:00', goodparts: 55, downtimeMinutes: 45, goalMinutes: 60 },
+        { hour: '22:00', goodparts: 65, downtimeMinutes: 60, goalMinutes: 60 },
+        { hour: '23:00', goodparts: 50, downtimeMinutes: 55, goalMinutes: 60 },
+        { hour: '00:00', goodparts: 40, downtimeMinutes: 45, goalMinutes: 60 },
+      ];
+    }
+
+    return productionData.map(point => ({
+      hour: point.timestamp.split('T')[1]?.substring(0, 5) || point.timestamp,
+      goodparts: point.goodParts || 0,
+      downtimeMinutes: 0, // TODO: Map from API response
+      goalMinutes: 60, // TODO: Map from API response
+    }));
+  }, [productionData]);
+
+  // Transform API data to table rows
+  const hourlyRows: HourlyStatRow[] = useMemo(() => {
+    if (!productionData || productionData.length === 0) {
+      // Fallback mock data if API returns nothing
+      return [
+        {
+          dateHour: '12/16 - 18:00',
+          status: '174',
+          machineStatus: '-',
+          manualDowntime: '-',
+          co: 8,
+          scrap: 8,
+        },
+        {
+          dateHour: '12/16 - 19:00',
+          status: '174',
+          machineStatus: '56m',
+          manualDowntime: '-',
+          co: 8,
+          scrap: 8,
+        },
+      ];
+    }
+
+    return productionData.map(point => {
+      const date = new Date(point.timestamp);
+      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+      const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      
+      return {
+        dateHour: `${dateStr} - ${timeStr}`,
+        status: point.goodParts?.toString() || '-',
+        machineStatus: '-', // TODO: Map from API response
+        manualDowntime: '-', // TODO: Map from API response
+        co: point.goodParts || 0,
+        scrap: point.rejectParts || 0,
+      };
+    });
+  }, [productionData]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }] }>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.colors.border }] }>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={[styles.backButton, { color: theme.colors.text }]}>‹</Text>
           </TouchableOpacity>
           <View>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Line 6</Text>
-            <Text style={[styles.headerSubtitle, { color: theme.colors.neutralText }]}>Product #1</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.neutralText }]}>
+              Product #1
+            </Text>
           </View>
         </View>
         <TouchableOpacity>
@@ -58,12 +137,32 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={refetch} />
+        }
+      >
+        {/* Error Banner */}
+        {error && (
+          <View style={[styles.alertBanner, { backgroundColor: '#FEE2E2' }]}>
+            <View style={styles.alertContent}>
+              <Text style={styles.alertIcon}>⚠️</Text>
+              <Text style={[styles.alertText, { color: '#991B1B' }]}>
+                {error}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Alert Banner */}
-        <View style={[styles.alertBanner, { backgroundColor: theme.colors.highlightBg }] }>
+        <View style={[styles.alertBanner, { backgroundColor: theme.colors.highlightBg }]}>
           <View style={styles.alertContent}>
             <Text style={styles.alertIcon}>ℹ️</Text>
-            <Text style={[styles.alertText, { color: theme.colors.text }]}>Line 6 is down for the day</Text>
+            <Text style={[styles.alertText, { color: theme.colors.text }]}>
+              {loading ? 'Loading production data...' : `Showing ${productionData.length} data points`}
+            </Text>
           </View>
           <TouchableOpacity>
             <Text style={styles.alertClose}>×</Text>
@@ -75,9 +174,23 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
         {/* Chart */}
         <View style={styles.chartContainer}>
-          <View style={{ height: 240, backgroundColor: theme.colors.backgroundNeutral, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: theme.colors.neutralText, fontSize: 14 }}>Chart (victory-native not web-compatible)</Text>
-          </View>
+          {loading ? (
+            <View
+              style={{
+                height: 240,
+                backgroundColor: theme.colors.backgroundNeutral,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <ActivityIndicator size="large" color={theme.colors.accent} />
+              <Text style={{ color: theme.colors.neutralText, fontSize: 14, marginTop: 8 }}>
+                Loading chart data...
+              </Text>
+            </View>
+          ) : (
+            <ProductionChart data={chartData} />
+          )}
         </View>
 
         {/* Legend */}

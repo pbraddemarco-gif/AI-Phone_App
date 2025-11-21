@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { productionService } from '../services/productionService';
-import {
-  MachinePerformance,
-  ProductionHistoryParams,
-  ProductionDataPoint,
-} from '../types/api';
+import { MachinePerformance, ProductionHistoryParams, ProductionDataPoint } from '../types/api';
 
 interface UseProductionDataResult {
   performance: MachinePerformance | null;
@@ -39,10 +35,7 @@ export function useProductionData(
       });
 
       // Fetch production history
-      const historyData = await productionService.getProductionHistory(
-        machineId,
-        params
-      );
+      const historyData = await productionService.getProductionHistory(machineId, params);
 
       setPerformance(perfData);
       setProductionHistory(historyData.data || []);

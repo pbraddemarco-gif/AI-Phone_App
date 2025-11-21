@@ -37,9 +37,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
     try {
       await authService.login(username, password);
-      
-      // Navigate to main app (Home screen)
-      navigation.replace('Home');
+
+      // Navigation will happen automatically via RootNavigator when auth state changes
+      // No manual navigation needed
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -55,7 +55,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       <View style={styles.content}>
         <BrandLogo size={140} />
         <Text style={[styles.title, { color: theme.colors.accent }]}>AutomationIntellect</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textInverse }]}>Log in to your account</Text>
+        <Text style={[styles.subtitle, { color: theme.colors.textInverse }]}>
+          Log in to your account
+        </Text>
         <TextInput
           style={[
             styles.input,

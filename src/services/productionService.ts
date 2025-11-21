@@ -21,15 +21,15 @@ class ProductionService {
     }
 
     return {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json',
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
     };
   }
 
   async getMachineStatus(machineIds: string[]): Promise<MachineStatus[]> {
     const headers = await this.getAuthHeaders();
     const params = machineIds.map((id, index) => `ids[${index}]=${id}`).join('&');
-    
+
     const response = await apiClient.get<MachineStatus[]>(
       `${API_BASE_URL}/machines/status?${params}`,
       { headers }
@@ -50,7 +50,7 @@ class ProductionService {
     }
   ): Promise<MachinePerformance> {
     const headers = await this.getAuthHeaders();
-    
+
     const queryParams = new URLSearchParams({
       start: params.start,
       end: params.end,
@@ -79,7 +79,7 @@ class ProductionService {
     params: ProductionHistoryParams
   ): Promise<ProductionHistoryResponse> {
     const headers = await this.getAuthHeaders();
-    
+
     const queryParams = new URLSearchParams({
       start: params.start,
       end: params.end,
@@ -122,7 +122,7 @@ class ProductionService {
     filter?: string
   ): Promise<ShiftConfig> {
     const headers = await this.getAuthHeaders();
-    
+
     const queryParams = new URLSearchParams({
       ...(mode && { mode }),
       ...(filter && { filter }),
@@ -136,10 +136,7 @@ class ProductionService {
     return response.data;
   }
 
-  async getMachineShiftScheduleByDate(
-    machineId: string,
-    date: string
-  ): Promise<ShiftSchedule> {
+  async getMachineShiftScheduleByDate(machineId: string, date: string): Promise<ShiftSchedule> {
     const headers = await this.getAuthHeaders();
 
     const response = await apiClient.get<ShiftSchedule>(
@@ -163,7 +160,7 @@ class ProductionService {
     }
   ): Promise<Notification[]> {
     const headers = await this.getAuthHeaders();
-    
+
     const queryParams = new URLSearchParams({
       ...(params.type && { type: params.type }),
       ...(params.unreadOnly !== undefined && { unreadOnly: params.unreadOnly.toString() }),
@@ -188,7 +185,7 @@ class ProductionService {
     filter?: string
   ): Promise<NotificationStats> {
     const headers = await this.getAuthHeaders();
-    
+
     const queryParams = new URLSearchParams({
       ...(type && { type }),
       ...(filter && { filter }),

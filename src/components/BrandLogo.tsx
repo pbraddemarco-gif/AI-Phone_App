@@ -14,7 +14,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ size = 140 }) => {
   // Basic gear teeth count approximation
   const teeth = 8;
   const toothWidth = (Math.PI * 2 * gearRadius) / (teeth * 6);
-  const toothHeight = size * 0.10;
+  const toothHeight = size * 0.1;
   const toothElements: JSX.Element[] = [];
 
   for (let i = 0; i < teeth; i++) {

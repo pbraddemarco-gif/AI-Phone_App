@@ -27,6 +27,10 @@ export default function RootNavigator() {
   const checkAuthStatus = async () => {
     try {
       const authenticated = await authService.isAuthenticated();
+      console.log(
+        '🔍 Auth status check:',
+        authenticated ? 'AUTHENTICATED ✅' : 'NOT AUTHENTICATED ❌'
+      );
       setIsAuthenticated(authenticated);
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -60,11 +64,7 @@ export default function RootNavigator() {
         </>
       ) : (
         // Auth stack for unauthenticated users
-        <Stack.Screen
-          name="Auth"
-          component={AuthNavigator}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="Auth" component={AuthNavigator} options={{ headerShown: false }} />
       )}
     </Stack.Navigator>
   );

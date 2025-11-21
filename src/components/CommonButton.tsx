@@ -10,7 +10,10 @@ interface CommonButtonProps {
 export default function CommonButton({ label, onPress }: CommonButtonProps) {
   const theme = useAppTheme();
   return (
-    <TouchableOpacity style={[styles.button, { backgroundColor: theme.colors.primary }]} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.button, { backgroundColor: theme.colors.primary }]}
+      onPress={onPress}
+    >
       <Text style={[styles.label, { color: theme.colors.text }]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -21,10 +24,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   label: {
     fontSize: 16,
-    fontWeight: '600'
-  }
+    fontWeight: '600',
+  },
 });
