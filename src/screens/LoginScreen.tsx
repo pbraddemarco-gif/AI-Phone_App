@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from 'react-native';
+import { BrandLogo } from '../components/BrandLogo';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAppTheme } from '../hooks/useAppTheme';
@@ -53,11 +53,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Image
-          source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oUdXGgAAAAASUVORK5CYII=' }}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <BrandLogo size={140} />
         <Text style={[styles.title, { color: theme.colors.accent }]}>AutomationIntellect</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textInverse }]}>Log in to your account</Text>
         <TextInput
