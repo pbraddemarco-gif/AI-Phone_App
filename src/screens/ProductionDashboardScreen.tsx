@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { ShiftTabs } from '../components/ShiftTabs';
 import { ProductionChart } from '../components/ProductionChart';
 import { HourlyStatsTable, HourlyStatRow } from '../components/HourlyStatsTable';
@@ -39,7 +39,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -96,7 +96,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         <Text style={styles.sectionTitle}>Hourly Stats</Text>
         <HourlyStatsTable rows={hourlyRows} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
