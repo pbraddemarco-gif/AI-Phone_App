@@ -5,11 +5,13 @@ import { ProductionChart } from '../components/ProductionChart';
 import { HourlyStatsTable, HourlyStatRow } from '../components/HourlyStatsTable';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 export type ProductionDashboardProps = NativeStackScreenProps<RootStackParamList, 'ProductionDashboard'>;
 
 const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigation }) => {
   const [shiftView, setShiftView] = useState<'current' | 'last'>('current');
+  const theme = useAppTheme();
 
   const chartData = useMemo(
     () => [
@@ -39,16 +41,16 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }] }>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }] }>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backButton}>‹</Text>
+            <Text style={[styles.backButton, { color: theme.colors.text }]}>‹</Text>
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Line 6</Text>
-            <Text style={styles.headerSubtitle}>Product #1</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Line 6</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.neutralText }]}>Product #1</Text>
           </View>
         </View>
         <TouchableOpacity>
@@ -58,10 +60,10 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Alert Banner */}
-        <View style={styles.alertBanner}>
+        <View style={[styles.alertBanner, { backgroundColor: theme.colors.highlightBg }] }>
           <View style={styles.alertContent}>
             <Text style={styles.alertIcon}>ℹ️</Text>
-            <Text style={styles.alertText}>Line 6 is down for the day</Text>
+            <Text style={[styles.alertText, { color: theme.colors.text }]}>Line 6 is down for the day</Text>
           </View>
           <TouchableOpacity>
             <Text style={styles.alertClose}>×</Text>
@@ -73,27 +75,29 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
         {/* Chart */}
         <View style={styles.chartContainer}>
-          <ProductionChart data={chartData} />
+          <View style={{ height: 240, backgroundColor: theme.colors.backgroundNeutral, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: theme.colors.neutralText, fontSize: 14 }}>Chart (victory-native not web-compatible)</Text>
+          </View>
         </View>
 
         {/* Legend */}
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: '#22C55E' }]} />
+            <View style={[styles.legendSwatch, { backgroundColor: theme.colors.accentAlt }]} />
             <Text style={styles.legendLabel}>Goodparts</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: '#FBBF24' }]} />
+            <View style={[styles.legendSwatch, { backgroundColor: theme.colors.warning }]} />
             <Text style={styles.legendLabel}>Downtime</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: '#3B82F6' }]} />
+            <View style={[styles.legendSwatch, { backgroundColor: theme.colors.accent }]} />
             <Text style={styles.legendLabel}>Production Goal</Text>
           </View>
         </View>
 
         {/* Hourly Stats */}
-        <Text style={styles.sectionTitle}>Hourly Stats</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Hourly Stats</Text>
         <HourlyStatsTable rows={hourlyRows} />
       </ScrollView>
     </View>

@@ -48,21 +48,21 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: theme.colors.primary }]} // dark primary background
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.primary }]}>
-          AIQ Production
+          AutomationIntellect
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-          Sign in to continue
+          Log in to your account
         </Text>
 
         <TextInput
-          style={[styles.input, { borderColor: theme.colors.primary, color: theme.colors.text }]}
+          style={[styles.input, { borderColor: theme.colors.accent, color: theme.colors.textInverse, backgroundColor: theme.colors.primaryActive }]}
           placeholder="Username"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.neutralText}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -71,9 +71,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         />
 
         <TextInput
-          style={[styles.input, { borderColor: theme.colors.primary, color: theme.colors.text }]}
+          style={[styles.input, { borderColor: theme.colors.accent, color: theme.colors.textInverse, backgroundColor: theme.colors.primaryActive }]}
           placeholder="Password"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.neutralText}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -90,7 +90,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         <TouchableOpacity
           style={[
             styles.button,
-            { backgroundColor: theme.colors.primary },
+            { backgroundColor: theme.colors.accent },
             isLoading && styles.buttonDisabled,
           ]}
           onPress={handleLogin}
@@ -117,29 +117,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: '600',
+    marginBottom: 4,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 16,
-    marginBottom: 32,
+    fontSize: 14,
+    marginBottom: 24,
     textAlign: 'center',
+    opacity: 0.9,
   },
   input: {
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: 15,
+    marginBottom: 14,
   },
   button: {
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   buttonDisabled: {
     opacity: 0.6,
