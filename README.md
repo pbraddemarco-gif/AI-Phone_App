@@ -53,6 +53,80 @@ Use `useAppTheme()` hook to access colors from `src/config/theme.ts`.
 
 `src/services/apiClient.ts` exports an Axios instance. Replace `baseURL` with your backend URL and extend with custom methods.
 
+## Development Proxy & One-Step Reset (Web CORS Bypass)
+
+To view live API data in the browser without CORS errors, run the local reverse proxy:
+
+1. Install dependencies (already added to package.json):
+
+```bash
+npm install
+```
+
+2. Start the proxy (forwarding to upstream auth + data endpoints):
+
+```bash
+npm run proxy
+```
+
+3. In a separate terminal, set Expo public env vars to route web requests through the proxy, then start Expo:
+
+```powershell
+$env:EXPO_PUBLIC_API_BASE="http://localhost:3001/api/data"
+$env:EXPO_PUBLIC_AUTH_BASE="http://localhost:3001/api/auth"
+npm start
+```
+
+The app (web only) will use `EXPO_PUBLIC_API_BASE` and `EXPO_PUBLIC_AUTH_BASE` instead of the hardcoded upstream URLs. Native (iOS/Android) continues to hit upstream directly.
+
+### One-Step Reset & Start (Recommended)
+
+Use the automated reset script to:
+
+1. Kill lingering processes on ports 3001 / 8081 / 8082.
+2. Restart the proxy and wait for health.
+3. Set `EXPO_PUBLIC_API_BASE` + `EXPO_PUBLIC_AUTH_BASE`.
+4. Launch Expo.
+
+```bash
+npm run dev:reset
+```
+
+Flags:
+
+```bash
+npm run dev:reset -- --web      # start web target
+npm run dev:reset -- --clear    # clear Metro cache
+npm run dev:reset -- --web --clear
+```
+
+Script location: `scripts/reset-dev.ps1`.
+
+### Separate Start (Manual)
+
+1. `npm run proxy`
+2. In a second terminal set env vars then `npm start`.
+
+Proxy code: `proxy/server.js` – maps `/api/data` and `/api/auth` to the real backends and injects permissive CORS headers for development.
+
+Health check: visit `http://localhost:3001/health` in the browser.
+
+Disable proxy by omitting the env vars or use plain `npm start`; the app falls back to original URLs.
+
+### Automatic Web Fallback
+
+If you forget to set env vars on web, the clients now fall back to `http://localhost:3001/api/auth` and `http://localhost:3001/api/data` automatically. Make sure the proxy is running (`npm run proxy` or `npm run dev:reset`) or login will fail.
+
+### Legacy Manual Combined Start
+
+You can still run both manually or with the existing concurrent script:
+
+```bash
+npm run dev
+```
+
+This uses `concurrently` to run `npm run proxy` and `expo start` together.
+
 ## Running the App
 
 ```bash

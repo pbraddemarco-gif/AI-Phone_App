@@ -79,7 +79,8 @@ export function useProductionHistory(
 
       setData(result);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch production history';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch production history';
       setError(errorMessage);
       console.error('Production history fetch error:', err);
     } finally {

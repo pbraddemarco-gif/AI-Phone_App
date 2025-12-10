@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AI Mobile App",
-    "slug": "ai-mobile-app",
+    "name": "AI Production Monitor",
+    "slug": "ai-production-monitor",
     "version": "0.1.0",
     "sdkVersion": "54.0.0",
     "platforms": ["ios", "android", "web"],
@@ -19,17 +19,29 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.automationintellect.aiproductionmonitor",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.automationintellect.aiproductionmonitor",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro"
     },
-    "plugins": ["expo-secure-store"]
+    "plugins": ["expo-secure-store"],
+    "extra": {
+      "eas": {
+        "projectId": "c8a91170-3131-42db-ac96-ea600a7a48fd"
+      }
+    }
   }
 }

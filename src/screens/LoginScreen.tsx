@@ -8,8 +8,10 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
-import { BrandLogo } from '../components/BrandLogo';
+// Replacing inline SVG with provided bitmap asset to "match uploaded image file"
+import aiLogo from '../../assets/ai-logo.png';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAppTheme } from '../hooks/useAppTheme';
@@ -47,14 +49,19 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
+  // TEMPORARY: Dev bypass - skip auth for testing
+  const handleDevBypass = () => {
+    navigation.navigate('ProductionDashboard', {});
+  };
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.backgroundDark }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <BrandLogo size={140} />
-        <Text style={[styles.title, { color: theme.colors.accent }]}>AutomationIntellect</Text>
+        <Image source={aiLogo} style={styles.logo} resizeMode="contain" />
+        <Text style={[styles.title, { color: theme.colors.accent }]}>Automation Intellect</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textInverse }]}>
           Log in to your account
         </Text>
@@ -110,6 +117,13 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <Text style={styles.buttonText}>Sign In</Text>
           )}
         </TouchableOpacity>
+
+        {/* TEMPORARY: Development shortcut - remove before production */}
+        <TouchableOpacity style={styles.devLink} onPress={handleDevBypass}>
+          <Text style={[styles.devLinkText, { color: theme.colors.accent }]}>
+            🔧 Dev: Go to Production (Mock Data)
+          </Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -122,13 +136,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 32,
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
   },
   logo: {
     width: 140,
     height: 140,
-    alignSelf: 'center',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -136,12 +153,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
     letterSpacing: 0.5,
+    width: '100%',
   },
   subtitle: {
     fontSize: 14,
     marginBottom: 24,
     textAlign: 'center',
     opacity: 0.9,
+    width: '100%',
   },
   input: {
     borderWidth: 1,
@@ -150,12 +169,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     marginBottom: 14,
+    width: '100%',
   },
   button: {
     borderRadius: 8,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
     alignItems: 'center',
     marginTop: 8,
+    width: '100%',
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -175,5 +197,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
     textAlign: 'center',
+  },
+  devLink: {
+    marginTop: 24,
+    paddingVertical: 8,
+  },
+  devLinkText: {
+    fontSize: 13,
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });

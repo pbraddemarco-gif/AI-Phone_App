@@ -7,80 +7,122 @@ import axios, { AxiosError } from 'axios';
 import { authApiClient } from './apiClient';
 import { saveToken, saveRefreshToken, getToken, clearToken } from './tokenStorage';
 import type { AuthTokenResponse, LoginCredentials, AuthError } from '../types/auth';
+import { extractCustomerAccounts } from './tokenParser';
+import {
+  saveCustomerAccounts,
+  getCustomerAccounts as loadCustomerAccounts,
+  clearCustomerAccounts,
+} from './accountStorage';
 
 const AUTH_ENDPOINT = '/accounts/token';
 const CLIENT_ID = 'B9C5132D-83A9-40FF-8B06-A00C53322E01';
 
 class AuthService {
+  private listeners: Array<() => void> = [];
+
+  addAuthListener(listener: () => void) {
+    this.listeners.push(listener);
+  }
+
+  removeAuthListener(listener: () => void) {
+    this.listeners = this.listeners.filter((l) => l !== listener);
+  }
+
+  private notifyAuthChanged() {
+    for (const l of this.listeners) {
+      try {
+        l();
+      } catch (e) {
+        console.warn('Auth listener error', e);
+      }
+    }
+  }
   /**
    * Login with username and password using OAuth password grant
    * Sends application/x-www-form-urlencoded request
    */
   async login(username: string, password: string): Promise<AuthTokenResponse> {
+    const formData = new URLSearchParams();
+    formData.append('grant_type', 'password');
+    formData.append('username', username);
+    formData.append('password', password);
+    formData.append('client_id', CLIENT_ID);
+
     try {
-      console.log('🔐 Login attempt starting...');
-      console.log('Username:', username);
-
-      const AUTH_URL = 'https://app.automationintellect.com/api/accounts/token';
-      console.log('API Endpoint:', AUTH_URL);
-      console.log('Client ID:', CLIENT_ID);
-
-      // Create form-urlencoded body
-      const formData = new URLSearchParams();
-      formData.append('grant_type', 'password');
-      formData.append('username', username);
-      formData.append('password', password);
-      formData.append('client_id', CLIENT_ID);
-
-      console.log(
-        '📤 Form data being sent:',
-        formData.toString().replace(/password=[^&]*/, 'password=***')
+      const response = await authApiClient.post<AuthTokenResponse>(
+        AUTH_ENDPOINT,
+        formData.toString(),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          // Axios will handle CORS when hitting proxy on web; upstream direct on native.
+        }
       );
-      console.log('📤 Sending login request using fetch API to bypass CORS preflight...');
 
-      // Use fetch API with mode: 'cors' to attempt CORS request
-      const response = await fetch(AUTH_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
-        mode: 'cors', // Allow CORS
-      });
+      const data = response.data;
 
-      console.log('Response status:', response.status);
+      let accountData = null;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Response data:', errorData);
-        throw new Error(
-          errorData.error_description || errorData.error || `Login failed (${response.status})`
-        );
+      if (data.account) {
+        let parsedAccount = data.account;
+        if (typeof data.account === 'string') {
+          try {
+            parsedAccount = JSON.parse(data.account);
+          } catch (e) {
+            console.error('❌ Failed to parse account string:', e);
+            parsedAccount = null;
+          }
+        }
+
+        if (parsedAccount) {
+          if (Array.isArray(parsedAccount)) {
+            accountData = parsedAccount;
+          } else if (typeof parsedAccount === 'object') {
+            const keys = Object.keys(parsedAccount);
+            if (keys.length > 0 && keys.every((k) => !isNaN(Number(k)))) {
+              accountData = Object.values(parsedAccount);
+            } else if (parsedAccount.Clients) {
+              accountData = parsedAccount.Clients;
+            }
+          }
+        }
       }
 
-      const data: AuthTokenResponse = await response.json();
-      console.log('✅ Login successful!');
-      console.log('Token received:', data.access_token.substring(0, 20) + '...');
+      if (accountData && accountData.length > 0) {
+        const customerAccounts = accountData.map((client: any) => ({
+          Id: client.Id || client.id || 0,
+          Name: client.Name || client.name || 'Unknown',
+          DisplayName: client.DisplayName || client.displayName || client.Name || 'Unknown',
+          ParentId: client.ParentId || client.parentId,
+          MachineId: client.MachineId || client.machineId,
+          ...client,
+        }));
+
+        await saveCustomerAccounts(customerAccounts);
+      }
 
       const { access_token, refresh_token } = data;
-
-      // Save tokens securely
       await saveToken(access_token);
-      console.log('💾 Token saved to secure storage');
 
       if (refresh_token) {
         await saveRefreshToken(refresh_token);
-        console.log('💾 Refresh token saved');
       }
 
+      this.notifyAuthChanged();
       return data;
-    } catch (error) {
-      console.error('❌ Login failed!');
-      console.error('Error details:', error);
-
-      if (error instanceof Error) {
-        throw error;
+    } catch (err) {
+      console.error('❌ Login failed');
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const payload: any = err.response?.data;
+        console.error('Status:', status);
+        console.error('Payload:', payload);
+        const message =
+          payload?.error_description ||
+          payload?.error ||
+          (status ? `Login failed (${status})` : 'Network/unknown error');
+        throw new Error(message);
       }
+      if (err instanceof Error) throw err;
       throw new Error('Network error. Please check your connection.');
     }
   }
@@ -90,6 +132,15 @@ class AuthService {
    */
   async getAccessToken(): Promise<string | null> {
     return await getToken();
+  }
+
+  /**
+   * Get customer accounts from stored token
+   * Note: Customer accounts are stored in the token response, not in the JWT itself
+   */
+  async getCustomerAccounts() {
+    // Load from AsyncStorage where we saved them during login
+    return await loadCustomerAccounts();
   }
 
   /**
@@ -105,6 +156,8 @@ class AuthService {
    */
   async logout(): Promise<void> {
     await clearToken();
+    await clearCustomerAccounts();
+    this.notifyAuthChanged();
   }
 }
 

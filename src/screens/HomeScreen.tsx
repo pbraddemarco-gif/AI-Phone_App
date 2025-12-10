@@ -13,7 +13,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <Text style={{ fontSize: 20, marginBottom: 16 }}>Welcome to AI Mobile App</Text>
       <CommonButton
         label="Production Dashboard"
-        onPress={() => navigation.navigate('ProductionDashboard')}
+        onPress={() => navigation.navigate('ProductionDashboard', {})}
       />
       <CommonButton
         label="Shift Comparison"

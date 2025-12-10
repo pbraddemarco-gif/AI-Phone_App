@@ -1,10 +1,15 @@
 // Machine Types
 export interface MachineStatus {
-  id: string;
-  name: string;
-  status: 'running' | 'idle' | 'down' | 'offline';
-  currentProduct?: string;
-  currentShift?: string;
+  Id: number;
+  Value: 'RUNNING' | 'IDLE' | 'STOPPED' | 'OFFLINE';
+  TotalSeconds: number;
+  Product: {
+    Id: number;
+    Name: string;
+    DisplayName: string;
+    Description: string;
+  } | null;
+  ProductionOrder: any | null;
 }
 
 export interface MachinePerformance {
@@ -53,6 +58,29 @@ export interface ShiftConfig {
   currentShift: ShiftSchedule | null;
   lastShift: ShiftSchedule | null;
   schedules: ShiftSchedule[];
+}
+
+// Detailed shift schedule response from API
+export interface ShiftScheduleItem {
+  Id: number; // Shift ID
+  TagId: number; // Tag type ID
+  ShiftGroupId: number;
+  Name: string;
+  DisplayName: string;
+  StartDateTime: string; // ISO date string
+  EndDateTime: string; // ISO date string
+  Type: string;
+  ShiftGroup?: {
+    Id: number;
+    Name: string;
+    DisplayName: string;
+  };
+  [key: string]: any;
+}
+
+export interface ShiftScheduleResponse {
+  Items: ShiftScheduleItem[];
+  TotalCount: number;
 }
 
 // Notification/Alert Types

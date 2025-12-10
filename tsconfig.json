@@ -4,7 +4,7 @@
     "module": "ESNext",
     "jsx": "react-native",
     "lib": ["ES2021", "DOM"],
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

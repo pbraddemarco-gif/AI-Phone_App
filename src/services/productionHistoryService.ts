@@ -5,24 +5,24 @@
 
 import { authApiClient } from './apiClient';
 
-export type ProductionMode = 
-  | 'goodparts' 
-  | 'rejectparts' 
-  | 'totalparts' 
-  | 'failureparts' 
-  | 'downtime' 
-  | 'uptime' 
-  | 'alarm' 
-  | 'OEE' 
-  | 'availability' 
-  | 'performance' 
+export type ProductionMode =
+  | 'goodparts'
+  | 'rejectparts'
+  | 'totalparts'
+  | 'failureparts'
+  | 'downtime'
+  | 'uptime'
+  | 'alarm'
+  | 'OEE'
+  | 'availability'
+  | 'performance'
   | 'quality';
 
 /**
  * API response structure for production history
  */
 export interface ProductionHistoryResponse {
-  History: HistoryDataPoint[];
+  History: (HistoryDataPoint | HistoryGroup)[]; // Can be direct points or grouped with Items
   Id: number;
   Key: string; // Mode: "OEE", "goodparts", "rejectparts", "downtime", etc.
   ShortName: string | null;
@@ -41,6 +41,15 @@ export interface HistoryDataPoint {
   DateTime: string; // ISO date string
   Value: number; // The actual metric value
   GroupBy: string | null;
+  GroupId: number | null;
+}
+
+/**
+ * History group that may contain Items array
+ */
+export interface HistoryGroup {
+  GroupBy: string | null;
+  Items: HistoryDataPoint[];
   GroupId: number | null;
 }
 
@@ -82,11 +91,11 @@ export async function getProductionHistory(
     machineId,
     start,
     end,
-    modes = ['goodparts', 'rejectparts', 'downtime'],
+    modes = ['goodparts', 'rejectparts'], // Temporarily remove downtime to test
     timeBase = 'hour',
-    intervalBase = 'hour',
+    intervalBase = 'day', // API default is 'day'
     filter,
-    dateType = 'calendar',
+    dateType, // Don't set default, let API use its default
     dims = [],
   } = params;
 
@@ -96,7 +105,11 @@ export async function getProductionHistory(
   queryParams.append('end', end);
   queryParams.append('timeBase', timeBase);
   queryParams.append('intervalBase', intervalBase);
-  queryParams.append('dateType', dateType);
+
+  // Only add dateType if explicitly provided
+  if (dateType) {
+    queryParams.append('dateType', dateType);
+  }
 
   // Add modes as modes[0], modes[1], etc.
   modes.forEach((mode, index) => {
@@ -123,7 +136,7 @@ export async function getProductionHistory(
     console.log('✅ Production history response received');
     console.log('📊 Response data length:', response.data.length);
     console.log('📊 Full response:', JSON.stringify(response.data, null, 2));
-    
+
     if (response.data.length > 0) {
       console.log('📊 First item Key:', response.data[0].Key);
       console.log('📊 First item History length:', response.data[0].History?.length || 0);
@@ -158,10 +171,37 @@ function transformApiResponse(responseData: ProductionHistoryResponse[]): Produc
   // Group by timestamp
   const pointsMap = new Map<string, ProductionPoint>();
 
-  responseData.forEach((modeData) => {
-    const mode = modeData.Key.toLowerCase();
+  console.log('🔄 Transforming response data, entries:', responseData.length);
 
-    modeData.History.forEach((dataPoint) => {
+  responseData.forEach((modeData, idx) => {
+    const mode = modeData.Key.toLowerCase();
+    console.log(
+      `🔄 Processing mode ${idx}: ${mode}, History items:`,
+      modeData.History?.length || 0
+    );
+
+    // Check if History is an array or has nested structure
+    let historyItems: HistoryDataPoint[] = [];
+
+    if (Array.isArray(modeData.History)) {
+      // History is an array - check if it's HistoryDataPoint[] or has nested Items
+      if (modeData.History.length > 0) {
+        const firstItem = modeData.History[0];
+        if ('Items' in firstItem && Array.isArray(firstItem.Items)) {
+          // Nested structure with Items array
+          console.log('🔄 Found nested Items structure');
+          historyItems = firstItem.Items as HistoryDataPoint[];
+        } else if ('DateTime' in firstItem && 'Value' in firstItem) {
+          // Direct HistoryDataPoint array
+          console.log('🔄 Found direct HistoryDataPoint array');
+          historyItems = modeData.History as HistoryDataPoint[];
+        }
+      }
+    }
+
+    console.log(`🔄 Processing ${historyItems.length} history items for ${mode}`);
+
+    historyItems.forEach((dataPoint, dpIdx) => {
       const timestamp = dataPoint.DateTime;
 
       if (!pointsMap.has(timestamp)) {
@@ -180,12 +220,22 @@ function transformApiResponse(responseData: ProductionHistoryResponse[]): Produc
       } else if (mode === 'downtime') {
         point.downtime = dataPoint.Value;
       }
+
+      if (dpIdx === 0) {
+        console.log(`🔄 First ${mode} point:`, timestamp, 'Value:', dataPoint.Value);
+      }
     });
   });
 
   // Convert map to array and sort by timestamp
   const points = Array.from(pointsMap.values());
   points.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  console.log('🔄 Final transformed points:', points.length);
+  if (points.length > 0) {
+    console.log('🔄 First point:', JSON.stringify(points[0]));
+    console.log('🔄 Last point:', JSON.stringify(points[points.length - 1]));
+  }
 
   return points;
 }

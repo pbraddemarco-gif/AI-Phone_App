@@ -3,73 +3,91 @@ import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
 
 export interface HourlyStatRow {
-  dateHour: string;
-  status: string;
-  machineStatus: string;
-  manualDowntime: string;
-  co: number;
+  hour: string;
+  production: number;
   scrap: number;
+  downtime: number;
 }
 
 interface HourlyStatsTableProps {
   rows: HourlyStatRow[];
+  date?: string; // Optional date to display in section header
 }
 
-export const HourlyStatsTable: React.FC<HourlyStatsTableProps> = ({ rows }) => {
+export const HourlyStatsTable: React.FC<HourlyStatsTableProps> = ({ rows, date }) => {
   const theme = useAppTheme();
   return (
-    <View
-      style={[
-        styles.table,
-        { borderColor: theme.colors.border, backgroundColor: theme.colors.background },
-      ]}
-    >
-      <View style={[styles.row, styles.headerRow]}>
-        <Text style={[styles.cell, styles.headerCell, { flex: 1.5 }]}></Text>
-        <Text style={[styles.cell, styles.headerCell]}>Status</Text>
-        <Text style={[styles.cell, styles.headerCell, { flex: 1.2 }]}>Machine Status DwnTm</Text>
-        <Text style={[styles.cell, styles.headerCell, { flex: 1.2 }]}>Manual DwnTm</Text>
-        <Text style={[styles.cell, styles.headerCell]}>CO</Text>
-        <Text style={[styles.cell, styles.headerCell]}>Scrap</Text>
+    <View style={styles.tableWrapper}>
+      {/* Fixed Header */}
+      <View
+        style={[
+          styles.tableHeader,
+          {
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.background,
+            borderTopLeftRadius: 8,
+            borderTopRightRadius: 8,
+          },
+        ]}
+      >
+        <View style={[styles.row, styles.headerRow]}>
+          <Text style={[styles.cell, styles.headerCell]}>Hour</Text>
+          <Text style={[styles.cell, styles.headerCell]}>Production</Text>
+          <Text style={[styles.cell, styles.headerCell]}>Scrap</Text>
+          <Text style={[styles.cell, styles.headerCell]}>Downtime</Text>
+        </View>
       </View>
-      <FlatList
-        data={rows}
-        scrollEnabled={false}
-        keyExtractor={(item) => item.dateHour}
-        renderItem={({ item, index }) => (
-          <View
-            style={[
-              styles.row,
-              { borderBottomColor: theme.colors.backgroundNeutral },
-              index % 2 === 0 && { backgroundColor: theme.colors.backgroundNeutral },
-            ]}
-          >
-            <Text style={[styles.cell, { flex: 1.5, color: theme.colors.text }]}>
-              {item.dateHour}
-            </Text>
-            <Text style={[styles.cell, { color: theme.colors.text }]}>{item.status}</Text>
-            <Text style={[styles.cell, { flex: 1.2, color: theme.colors.text }]}>
-              {item.machineStatus}
-            </Text>
-            <Text style={[styles.cell, { flex: 1.2, color: theme.colors.text }]}>
-              {item.manualDowntime}
-            </Text>
-            <Text style={[styles.cell, { color: theme.colors.text }]}>{item.co}</Text>
-            <Text style={[styles.cell, { color: theme.colors.text }]}>{item.scrap}</Text>
-          </View>
-        )}
-      />
+
+      {/* Scrollable Body */}
+      <View
+        style={[
+          styles.tableBody,
+          {
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.background,
+            borderBottomLeftRadius: 8,
+            borderBottomRightRadius: 8,
+          },
+        ]}
+      >
+        <FlatList
+          data={rows}
+          scrollEnabled={false}
+          keyExtractor={(item, index) => `${item.hour}-${index}`}
+          renderItem={({ item, index }) => (
+            <View
+              style={[
+                styles.row,
+                { borderBottomColor: theme.colors.backgroundNeutral },
+                index % 2 === 0 && { backgroundColor: theme.colors.backgroundNeutral },
+              ]}
+            >
+              <Text style={[styles.cell, { color: theme.colors.text }]}>{item.hour}</Text>
+              <Text style={[styles.cell, { color: theme.colors.text }]}>{item.production}</Text>
+              <Text style={[styles.cell, { color: theme.colors.text }]}>{item.scrap}</Text>
+              <Text style={[styles.cell, { color: theme.colors.text }]}>
+                {item.downtime > 0 ? `${item.downtime}m` : '-'}
+              </Text>
+            </View>
+          )}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  table: {
+  tableWrapper: {
     marginHorizontal: 16,
     marginBottom: 16,
+  },
+  tableHeader: {
     borderWidth: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
+    borderBottomWidth: 0,
+  },
+  tableBody: {
+    borderWidth: 1,
+    borderTopWidth: 0,
   },
   row: {
     flexDirection: 'row',

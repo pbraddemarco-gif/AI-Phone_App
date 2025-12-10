@@ -36,18 +36,18 @@ export function ShiftProductionChart({ data, width, height }: ShiftProductionCha
   // Since we need to show multiple metrics (good, reject, downtime) for both shifts,
   // we'll create 3 separate charts stacked vertically
 
-  const labels = data.map(d => d.hourLabel);
+  const labels = data.map((d) => d.hourLabel);
 
   // Good Parts Chart Data
   const goodPartsData = {
     labels,
     datasets: [
       {
-        data: data.map(d => d.currentGood),
+        data: data.map((d) => d.currentGood),
         color: (opacity = 1) => `rgba(46, 213, 115, ${opacity})`, // Green for current
       },
       {
-        data: data.map(d => d.previousGood),
+        data: data.map((d) => d.previousGood),
         color: (opacity = 1) => `rgba(134, 142, 150, ${opacity})`, // Gray for previous
       },
     ],
@@ -59,11 +59,11 @@ export function ShiftProductionChart({ data, width, height }: ShiftProductionCha
     labels,
     datasets: [
       {
-        data: data.map(d => d.currentReject),
+        data: data.map((d) => d.currentReject),
         color: (opacity = 1) => `rgba(255, 71, 87, ${opacity})`, // Red for current
       },
       {
-        data: data.map(d => d.previousReject),
+        data: data.map((d) => d.previousReject),
         color: (opacity = 1) => `rgba(134, 142, 150, ${opacity})`, // Gray for previous
       },
     ],
@@ -75,11 +75,11 @@ export function ShiftProductionChart({ data, width, height }: ShiftProductionCha
     labels,
     datasets: [
       {
-        data: data.map(d => d.currentDowntime),
+        data: data.map((d) => d.currentDowntime),
         color: (opacity = 1) => `rgba(255, 165, 2, ${opacity})`, // Orange for current
       },
       {
-        data: data.map(d => d.previousDowntime),
+        data: data.map((d) => d.previousDowntime),
         color: (opacity = 1) => `rgba(134, 142, 150, ${opacity})`, // Gray for previous
       },
     ],

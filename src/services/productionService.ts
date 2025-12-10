@@ -1,5 +1,5 @@
 import { authService } from './authService';
-import { apiClient } from './apiClient';
+import { apiClient, authApiClient } from './apiClient';
 import {
   MachineStatus,
   MachinePerformance,
@@ -27,13 +27,9 @@ class ProductionService {
   }
 
   async getMachineStatus(machineIds: string[]): Promise<MachineStatus[]> {
-    const headers = await this.getAuthHeaders();
     const params = machineIds.map((id, index) => `ids[${index}]=${id}`).join('&');
 
-    const response = await apiClient.get<MachineStatus[]>(
-      `${API_BASE_URL}/machines/status?${params}`,
-      { headers }
-    );
+    const response = await authApiClient.get<MachineStatus[]>(`/machines/status?${params}`);
 
     return response.data;
   }
@@ -118,7 +114,7 @@ class ProductionService {
 
   async getMachineShiftSchedules(
     machineId: string,
-    mode?: string,
+    mode?: 'current' | 'previous',
     filter?: string
   ): Promise<ShiftConfig> {
     const headers = await this.getAuthHeaders();

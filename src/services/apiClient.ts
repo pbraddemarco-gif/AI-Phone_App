@@ -1,22 +1,39 @@
 /**
- * Axios API client with automatic Bearer token injection
- * Supports multiple base URLs for different API endpoints
+ * Axios API clients with automatic Bearer token injection.
+ * For web (Expo Web / browser) we must route through the local proxy to avoid CORS.
+ * If EXPO_PUBLIC_* env vars are missing we fall back to localhost proxy defaults.
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
+import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 
-// Primary auth endpoint - direct URL (CORS must be enabled on server)
+// Upstream (native direct calls) endpoints
 const AUTH_BASE_URL = 'https://app.automationintellect.com/api';
-
-// Secondary data endpoint (existing)
 const DATA_BASE_URL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
 
+// Web proxy enforced bases (proxy/server.js). We prefer explicit env values; fallback if absent.
+const envAuth = process.env.EXPO_PUBLIC_AUTH_BASE;
+const envData = process.env.EXPO_PUBLIC_API_BASE;
+const proxyAuthFallback = 'http://localhost:3001/api/auth';
+const proxyDataFallback = 'http://localhost:3001/api/data';
+
+const usingWeb = Platform.OS === 'web';
+const resolvedAuthBase = usingWeb ? envAuth || proxyAuthFallback : envAuth || AUTH_BASE_URL;
+const resolvedDataBase = usingWeb ? envData || proxyDataFallback : envData || DATA_BASE_URL;
+
+if (usingWeb) {
+  if (!envAuth)
+    console.warn('[apiClient] EXPO_PUBLIC_AUTH_BASE missing; using fallback', proxyAuthFallback);
+  if (!envData)
+    console.warn('[apiClient] EXPO_PUBLIC_API_BASE missing; using fallback', proxyDataFallback);
+}
+
 /**
- * Main API client for authenticated requests
+ * Main API client (data)
  */
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: DATA_BASE_URL,
+  baseURL: resolvedDataBase,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -25,26 +42,27 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 /**
- * Auth API client for authentication endpoints
+ * Auth API client (login, tokens)
  */
 export const authApiClient: AxiosInstance = axios.create({
-  baseURL: AUTH_BASE_URL,
+  baseURL: resolvedAuthBase,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+console.log('[apiClient] Data baseURL resolved =>', resolvedDataBase);
+console.log('[apiClient] Auth baseURL resolved =>', resolvedAuthBase);
+
 /**
  * Request interceptor: Inject Bearer token into every request
  */
 const tokenInterceptor = async (config: InternalAxiosRequestConfig) => {
   const token = await getToken();
-
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 };
 
@@ -53,18 +71,14 @@ const tokenInterceptor = async (config: InternalAxiosRequestConfig) => {
  */
 const unauthorizedInterceptor = async (error: AxiosError) => {
   if (error.response?.status === 401) {
-    // Token expired or invalid - clear storage
     await clearToken();
     console.warn('Authentication token expired or invalid');
   }
   return Promise.reject(error);
 };
 
-// Apply interceptors to main API client
 apiClient.interceptors.request.use(tokenInterceptor, (error) => Promise.reject(error));
 apiClient.interceptors.response.use((response) => response, unauthorizedInterceptor);
-
-// Apply interceptors to auth API client
 authApiClient.interceptors.request.use(tokenInterceptor, (error) => Promise.reject(error));
 authApiClient.interceptors.response.use((response) => response, unauthorizedInterceptor);
 

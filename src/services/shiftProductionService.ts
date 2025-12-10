@@ -8,7 +8,7 @@ import { ShiftHourPoint, ShiftWindow } from '../types/ShiftProduction';
 
 /**
  * Get shift comparison data for current vs previous shift
- * 
+ *
  * @param params Machine ID and shift windows
  * @returns Array of hourly data points comparing both shifts
  */
@@ -53,8 +53,8 @@ export async function getShiftComparisonData(params: {
 
   // Get union of all hours from both shifts
   const allHours = new Set<string>();
-  Object.keys(currentHourlyData).forEach(hour => allHours.add(hour));
-  Object.keys(previousHourlyData).forEach(hour => allHours.add(hour));
+  Object.keys(currentHourlyData).forEach((hour) => allHours.add(hour));
+  Object.keys(previousHourlyData).forEach((hour) => allHours.add(hour));
 
   // Sort hours chronologically
   const sortedHours = Array.from(allHours).sort();
@@ -85,30 +85,34 @@ export async function getShiftComparisonData(params: {
 
 /**
  * Build hourly map from API response
- * 
+ *
  * Maps each HistoryDTO by its Key (mode) and aggregates by hour.
- * 
+ *
  * How we identify modes:
  * - Each HistoryDTO has a Key field (e.g., "goodparts", "rejectparts", "downtime")
  * - We match the Key (case-insensitive) to determine which metric it represents
  * - The History[] array contains hourly data points with DateTime and Value
- * 
+ *
  * @param historyData Array of HistoryDTO from API
  * @returns Map of hour -> metrics
  */
-function buildHourlyMap(historyData: HistoryDTO[]): Record<string, {
-  goodparts: number;
-  rejectparts: number;
-  downtime: number;
-}> {
-  const hourlyMap: Record<string, { goodparts: number; rejectparts: number; downtime: number }> = {};
+function buildHourlyMap(historyData: HistoryDTO[]): Record<
+  string,
+  {
+    goodparts: number;
+    rejectparts: number;
+    downtime: number;
+  }
+> {
+  const hourlyMap: Record<string, { goodparts: number; rejectparts: number; downtime: number }> =
+    {};
 
   // Process each mode's data
-  historyData.forEach(modeData => {
+  historyData.forEach((modeData) => {
     const modeKey = modeData.Key.toLowerCase();
 
     // Process each hourly data point in the History array
-    modeData.History.forEach(dataPoint => {
+    modeData.History.forEach((dataPoint) => {
       const hour = truncateToHour(dataPoint.DateTime);
 
       if (!hourlyMap[hour]) {

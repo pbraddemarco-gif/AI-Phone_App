@@ -112,8 +112,14 @@ export function MachineShiftComparisonScreen({ route }: MachineShiftComparisonSc
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={refetch} colors={['#3788d8']} />
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={refetch}
+          tintColor="#007AFF"
+          colors={['#007AFF']}
+        />
       }
+      alwaysBounceVertical={true}
     >
       <View style={styles.header}>
         <Text style={styles.title}>Shift Comparison</Text>

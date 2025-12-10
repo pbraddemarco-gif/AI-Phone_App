@@ -3,7 +3,7 @@
  * Handles production history API calls with proper DTO types
  */
 
-import { authApiClient } from './apiClient';
+import { apiClient } from './apiClient';
 
 /**
  * API Response Types (DTO)
@@ -63,20 +63,18 @@ export interface ProductionHistoryParams {
 
 /**
  * Fetch production history from API
- * 
+ *
  * Returns one HistoryDTO per mode requested.
- * 
+ *
  * Mapping modes to HistoryDTO:
  * - Each HistoryDTO.Key contains the mode name (e.g., "goodparts", "rejectparts", "downtime")
  * - Match HistoryDTO by checking Key.toLowerCase() === mode.toLowerCase()
  * - History[] array contains hourly data points with DateTime and Value
- * 
+ *
  * @param params Production history parameters
  * @returns Promise resolving to array of HistoryDTO (one per mode)
  */
-export async function getProductionHistory(
-  params: ProductionHistoryParams
-): Promise<HistoryDTO[]> {
+export async function getProductionHistory(params: ProductionHistoryParams): Promise<HistoryDTO[]> {
   const {
     machineId,
     start,
@@ -118,8 +116,9 @@ export async function getProductionHistory(
   console.log('📊 Fetching production history for machine', machineId);
 
   try {
-    const response = await authApiClient.get<HistoryDTO[]>(
-      `/machines/${machineId}/productionhistory`,
+    // Use data client via proxy. Prefix with "/api" so proxy forwards to EB "/api/..." path.
+    const response = await apiClient.get<HistoryDTO[]>(
+      `/api/machines/${machineId}/productionhistory`,
       { params: queryParams }
     );
 

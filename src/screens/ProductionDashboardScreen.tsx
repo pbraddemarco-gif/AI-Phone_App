@@ -1,5 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useMemo, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  SafeAreaView,
+  PanResponder,
+  GestureResponderEvent,
+  PanResponderGestureState,
+} from 'react-native';
 import { ShiftTabs } from '../components/ShiftTabs';
 import { ProductionChart } from '../components/ProductionChart';
 import { HourlyStatsTable, HourlyStatRow } from '../components/HourlyStatsTable';
@@ -7,77 +19,272 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { useProductionHistory } from '../hooks/useProductionHistory';
+import { useCurrentProduct } from '../hooks/useCurrentProduct';
+import { useShiftSchedule } from '../hooks/useShiftSchedule';
+import { useMachineName } from '../hooks/useMachineName';
+import { useFaultDowntime } from '../hooks/useFaultDowntime';
+import { useMachineStatus } from '../hooks/useMachineStatus';
+import { FaultDowntimeChart } from '../components/FaultDowntimeChart';
+import { authService } from '../services/authService';
+import { DEV_FLAGS } from '../config/devFlags';
+import { getShiftSchedule, extractShiftInfo } from '../services/shiftScheduleService';
+import { ShiftScheduleResponse } from '../types/api';
 
 export type ProductionDashboardProps = NativeStackScreenProps<
   RootStackParamList,
   'ProductionDashboard'
 >;
 
-const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigation }) => {
+const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigation, route }) => {
+  // Log incoming route params to verify navigation data
+  try {
+    // Route params available in route.params
+  } catch (e) {
+    console.error('❌ Failed to access route params:', e);
+  }
   const [shiftView, setShiftView] = useState<'current' | 'last'>('current');
+  const [viewMode, setViewMode] = useState<'production' | 'faults'>('production');
+  const [showAllFaults, setShowAllFaults] = useState(false);
+  const [sortBy, setSortBy] = useState<'downtime' | 'count'>('downtime');
+  const [hourSortOrder, setHourSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentShiftSchedule, setCurrentShiftSchedule] = useState<ShiftScheduleResponse | null>(
+    null
+  );
+  const [lastShiftSchedule, setLastShiftSchedule] = useState<ShiftScheduleResponse | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(false);
   const theme = useAppTheme();
 
-  // Machine ID for production data
-  const machineId = 775;
-  
+  // Machine ID & name from route params (fallbacks if not provided)
+  const machineId = route.params?.machineId ?? 525;
+  const machineName = route.params?.machineName ?? `Machine ${machineId}`;
+  const partsHourlyGoal = Math.round(route.params?.partsHourlyGoal ?? 0);
+
+  // Debug logging for partsHourlyGoal
+  console.log(
+    '🎯 ProductionDashboard received partsHourlyGoal:',
+    partsHourlyGoal,
+    'from route.params:',
+    route.params
+  );
+
+  // Fetch shift schedules on mount and when shiftView changes
+  React.useEffect(() => {
+    const fetchShiftSchedules = async () => {
+      setShiftLoading(true);
+      try {
+        console.log('📅 Fetching shift schedules for machine:', machineId);
+        const [current, previous] = await Promise.all([
+          getShiftSchedule(machineId, 'current'),
+          getShiftSchedule(machineId, 'previous'),
+        ]);
+
+        setCurrentShiftSchedule(current);
+        setLastShiftSchedule(previous);
+
+        // Log shift info for debugging
+        const currentInfo = extractShiftInfo(current);
+        const previousInfo = extractShiftInfo(previous);
+        console.log('📅 Current shift info:', currentInfo);
+        console.log('📅 Previous shift info:', previousInfo);
+      } catch (error) {
+        console.error('❌ Failed to fetch shift schedules:', error);
+      } finally {
+        setShiftLoading(false);
+      }
+    };
+
+    fetchShiftSchedules();
+  }, [machineId]);
+
+  // Fetch real-time machine status
+  const {
+    status: machineStatus,
+    loading: statusLoading,
+    refetch: refetchStatus,
+  } = useMachineStatus({ machineId });
+
   // Calculate date range based on shift selection
-  const { start, end } = useMemo(() => {
-    const today = new Date();
-    
+  const { start, end, dayStart, dayEnd } = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+    const endOfYesterday = new Date(endOfToday.getTime() - 24 * 60 * 60 * 1000);
+
     if (shiftView === 'current') {
-      // Current shift: today
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      // Last 24 hours (current day)
+      const oneDayAgo = new Date(now);
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
       return {
-        start: startOfDay.toISOString(),
-        end: endOfDay.toISOString(),
+        start: oneDayAgo.toISOString(),
+        end: now.toISOString(),
+        dayStart: startOfToday.toISOString(),
+        dayEnd: endOfToday.toISOString(),
       };
     } else {
-      // Last shift: yesterday
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const startOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-      const endOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+      // Previous 24 hours (last day)
+      const twoDaysAgo = new Date(now);
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+      const oneDayAgo = new Date(now);
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
       return {
-        start: startOfDay.toISOString(),
-        end: endOfDay.toISOString(),
+        start: twoDaysAgo.toISOString(),
+        end: oneDayAgo.toISOString(),
+        dayStart: startOfYesterday.toISOString(),
+        dayEnd: endOfYesterday.toISOString(),
       };
     }
   }, [shiftView]);
-  
-  const { data: productionData, loading, error, refetch } = useProductionHistory({
+  // Fault downtime (use full calendar day bounds for consistency)
+  const {
+    data: faultData,
+    loading: faultsLoading,
+    error: faultsError,
+    refetch: refetchFaults,
+  } = useFaultDowntime({
     machineId,
-    start,
-    end,
-    modes: ['goodparts', 'rejectparts', 'downtime'],
-    timeBase: 'hour',
+    start: dayStart,
+    end: dayEnd,
+    enabled: viewMode === 'faults',
   });
 
-  
-  // Transform API data to chart format
-  const chartData = useMemo(() => {
-    console.log('📊 Chart Data - productionData length:', productionData?.length || 0);
-    console.log('📊 Chart Data - productionData:', JSON.stringify(productionData));
-    
-    if (!productionData || productionData.length === 0) {
-      console.log('⚠️ No production data available, using mock data');
-      // Fallback mock data if API returns nothing
-      return [
-        { hour: '18:00', goodparts: 45, rejectparts: 5, downtimeMinutes: 55, goalMinutes: 60 },
-        { hour: '19:00', goodparts: 60, rejectparts: 3, downtimeMinutes: 40, goalMinutes: 60 },
-        { hour: '20:00', goodparts: 50, rejectparts: 4, downtimeMinutes: 50, goalMinutes: 60 },
-        { hour: '21:00', goodparts: 55, rejectparts: 2, downtimeMinutes: 45, goalMinutes: 60 },
-        { hour: '22:00', goodparts: 65, rejectparts: 6, downtimeMinutes: 60, goalMinutes: 60 },
-        { hour: '23:00', goodparts: 50, rejectparts: 3, downtimeMinutes: 55, goalMinutes: 60 },
-        { hour: '00:00', goodparts: 40, rejectparts: 4, downtimeMinutes: 45, goalMinutes: 60 },
-      ];
+  const faultPoints = useMemo(() => {
+    const points = faultData
+      .map((f) => ({
+        description: f.Description || 'Unknown',
+        seconds: (f.FaultDownTime || 0) * 60, // Convert minutes to seconds
+        count: f.Count || 0,
+      }))
+      .filter((fp) => fp.seconds > 0)
+      .sort((a, b) => {
+        if (sortBy === 'downtime') {
+          return b.seconds - a.seconds; // Descending by downtime
+        } else {
+          return b.count - a.count; // Descending by count
+        }
+      });
+    return points;
+  }, [faultData, sortBy]);
+
+  // Chart points - always top 5
+  const chartFaultPoints = useMemo(() => {
+    return faultPoints.slice(0, 5);
+  }, [faultPoints]);
+
+  // Table points - top 5 or all based on state
+  const tableFaultPoints = useMemo(() => {
+    return showAllFaults ? faultPoints : faultPoints.slice(0, 5);
+  }, [faultPoints, showAllFaults]);
+
+  const hasMoreFaults = faultPoints.length > 5;
+
+  // Swipe gesture logic (PanResponder for reliable horizontal swipe)
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (
+        _e: GestureResponderEvent,
+        gestureState: PanResponderGestureState
+      ) => {
+        // Activate only if horizontal movement is significant and greater than vertical
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > 15 && Math.abs(dx) > Math.abs(dy);
+      },
+      onPanResponderRelease: (
+        _e: GestureResponderEvent,
+        gestureState: PanResponderGestureState
+      ) => {
+        const { dx } = gestureState;
+        if (dx > 50 && viewMode === 'production') {
+          setViewMode('faults');
+        } else if (dx < -50 && viewMode === 'faults') {
+          setViewMode('production');
+        }
+      },
+    })
+  );
+
+  // Build dims[0] from shift schedule: format is "TagId;ShiftId"
+  const { dims0, productionStart, productionEnd } = useMemo(() => {
+    const activeShift = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
+
+    if (!activeShift || !activeShift.Items || activeShift.Items.length === 0) {
+      console.log('⚠️ No shift schedule available, using calendar day fallback');
+      // Fallback to calendar day if no shift schedule available
+      return {
+        dims0: undefined,
+        productionStart: dayStart,
+        productionEnd: dayEnd,
+      };
     }
 
-    console.log('✅ Using real API data for chart');
-    console.log('📊 Transforming chart data, total points:', productionData.length);
-    console.log('📊 Sample point:', JSON.stringify(productionData[0]));
+    const shift = activeShift.Items[0];
+    // Build dims as "TagId;ShiftId" format
+    const dimsValue = `${shift.TagId};${shift.Id}`;
 
-    const transformed = productionData.map(point => {
+    console.log(
+      `📊 Production history params: dims=[${dimsValue}], start=${shift.StartDateTime}, end=${shift.EndDateTime}`
+    );
+
+    return {
+      dims0: dimsValue,
+      productionStart: shift.StartDateTime,
+      productionEnd: shift.EndDateTime,
+    };
+  }, [currentShiftSchedule, lastShiftSchedule, shiftView, dayStart, dayEnd]);
+
+  // Fetch production history using shift-based dims and date boundaries
+  const {
+    data: productionData,
+    loading,
+    error,
+    refetch,
+  } = useProductionHistory({
+    machineId,
+    start: productionStart,
+    end: productionEnd,
+    modes: ['OEE', 'goodparts', 'rejectparts', 'downtime'],
+    timeBase: 'hour',
+    intervalBase: 'hour',
+    dateType: 'calendar',
+    filter: 'PlannedProductionTime:true',
+    dims: dims0 ? [dims0] : undefined,
+  });
+
+  // Refetch production data when shift view changes
+  React.useEffect(() => {
+    if (dims0) {
+      console.log('🔄 Shift view changed, refetching production data');
+      refetch();
+    }
+  }, [shiftView, dims0]);
+
+  // Machine name hook - use API data or fallback to route param
+  const { machineName: apiMachineName } = useMachineName({
+    machineId,
+    start: (() => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    })(),
+    end: (() => {
+      const d = new Date();
+      d.setHours(23, 59, 59, 999);
+      return d.toISOString();
+    })(),
+  });
+
+  // Use API machine name if available, otherwise use the name from navigation params
+  const displayMachineName = apiMachineName || machineName;
+
+  // Transform API data to chart format
+  const chartData = useMemo(() => {
+    if (!productionData || productionData.length === 0) {
+      return [];
+    }
+
+    return productionData.map((point) => {
       const date = new Date(point.timestamp);
       const hours = date.getHours().toString().padStart(2, '0');
       const minutes = date.getMinutes().toString().padStart(2, '0');
@@ -91,151 +298,391 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         goalMinutes: 60,
       };
     });
-    
-    console.log('📊 Transformed chart data:', JSON.stringify(transformed));
-    return transformed;
   }, [productionData]);
 
   // Transform API data to table rows
-  const hourlyRows: HourlyStatRow[] = useMemo(() => {
+  const { hourlyRows, tableDate } = useMemo(() => {
     if (!productionData || productionData.length === 0) {
-      // Fallback mock data if API returns nothing
-      return [
-        {
-          dateHour: '12/16 - 18:00',
-          status: '174',
-          machineStatus: '-',
-          manualDowntime: '-',
-          co: 8,
-          scrap: 8,
-        },
-        {
-          dateHour: '12/16 - 19:00',
-          status: '174',
-          machineStatus: '56m',
-          manualDowntime: '-',
-          co: 8,
-          scrap: 8,
-        },
-      ];
+      return {
+        tableDate: new Date().toLocaleDateString('en-US', {
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        hourlyRows: [],
+      };
     }
 
-    return productionData.map(point => {
+    // Get date from first data point for section header
+    const firstDate = new Date(productionData[0].timestamp);
+    const tableDate = firstDate.toLocaleDateString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    const rows = productionData.map((point) => {
       const date = new Date(point.timestamp);
-      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-      const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      
-      const downtimeMinutes = point.downtime || 0;
-      const downtimeDisplay = downtimeMinutes > 0 ? `${Math.round(downtimeMinutes)}m` : '-';
-      
+      const hour = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
       return {
-        dateHour: `${dateStr} - ${timeStr}`,
-        status: point.goodParts?.toString() || '-',
-        machineStatus: downtimeDisplay,
-        manualDowntime: '-',
-        co: point.goodParts || 0,
-        scrap: point.rejectParts || 0,
+        hour,
+        timestamp: point.timestamp, // Keep timestamp for sorting
+        production: Math.round(point.goodParts || 0),
+        scrap: Math.round(point.rejectParts || 0),
+        downtime: Math.round(point.downtime || 0),
       };
     });
-  }, [productionData]);
+
+    // Sort rows by timestamp based on hourSortOrder
+    const sortedRows = [...rows].sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return hourSortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+    });
+
+    return { hourlyRows: sortedRows, tableDate };
+  }, [productionData, shiftView, hourSortOrder]);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.warn('Logout failed', e);
+    }
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Back">
             <Text style={[styles.backButton, { color: theme.colors.text }]}>‹</Text>
           </TouchableOpacity>
           <View>
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Line 6</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              {displayMachineName}
+            </Text>
             <Text style={[styles.headerSubtitle, { color: theme.colors.neutralText }]}>
-              Product #1
+              Current Product:{' '}
+              <Text style={{ fontWeight: 'bold' }}>
+                {statusLoading ? 'Loading…' : machineStatus?.Product?.DisplayName || 'No Product'}
+              </Text>
             </Text>
           </View>
         </View>
-        <TouchableOpacity>
-          <Text style={styles.commentIcon}>💬</Text>
+        {DEV_FLAGS.SHOW_TEMP_LOGOUT_BUTTON && (
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            accessibilityLabel="Logout"
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Error Banner */}
+      {error && (
+        <View style={[styles.alertBanner, { backgroundColor: '#FEE2E2' }]}>
+          <View style={styles.alertContent}>
+            <Text style={styles.alertIcon}>⚠️</Text>
+            <Text style={[styles.alertText, { color: '#991B1B' }]}>{error}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Status Banner */}
+      <View
+        style={[
+          styles.alertBanner,
+          {
+            backgroundColor:
+              machineStatus?.Value === 'RUNNING'
+                ? '#10B981'
+                : machineStatus?.Value === 'IDLE'
+                  ? '#F59E0B'
+                  : machineStatus?.Value === 'STOPPED'
+                    ? '#EF4444'
+                    : '#6B7280',
+          },
+        ]}
+      >
+        <View style={styles.alertContent}>
+          <Text style={[styles.alertIcon, { color: '#FFFFFF' }]}>
+            {machineStatus?.Value === 'RUNNING'
+              ? '✓'
+              : machineStatus?.Value === 'IDLE'
+                ? '⏸'
+                : machineStatus?.Value === 'STOPPED'
+                  ? '⚠'
+                  : '○'}
+          </Text>
+          <Text style={[styles.alertText, { color: '#FFFFFF' }]}>
+            Machine Status:{' '}
+            {statusLoading
+              ? 'Loading...'
+              : machineStatus?.Value
+                ? machineStatus.Value.charAt(0) + machineStatus.Value.slice(1).toLowerCase()
+                : 'Unknown'}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={refetchStatus}>
+          <Text style={[styles.alertClose, { color: '#FFFFFF' }]}>⟳</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refetch} />
-        }
-      >
-        {/* Error Banner */}
-        {error && (
-          <View style={[styles.alertBanner, { backgroundColor: '#FEE2E2' }]}>
-            <View style={styles.alertContent}>
-              <Text style={styles.alertIcon}>⚠️</Text>
-              <Text style={[styles.alertText, { color: '#991B1B' }]}>
-                {error}
-              </Text>
-            </View>
-          </View>
-        )}
+      {/* Shift Tabs */}
+      <ShiftTabs active={shiftView} onChange={setShiftView} />
+      {/* Mode toggle indicator */}
+      <View style={styles.modeToggleRow}>
+        <Text style={[styles.modeToggleLabel, viewMode === 'production' && styles.modeActive]}>
+          Production
+        </Text>
+        <Text style={styles.modeToggleSeparator}>|</Text>
+        <Text style={[styles.modeToggleLabel, viewMode === 'faults' && styles.modeActive]}>
+          Faults
+        </Text>
+        <Text style={styles.modeHint}>Swipe ↔ to switch</Text>
+        <TouchableOpacity
+          style={styles.modeArrowButton}
+          onPress={() => setViewMode(viewMode === 'production' ? 'faults' : 'production')}
+          accessibilityLabel="Toggle production/faults chart"
+        >
+          <Text style={styles.modeArrowText}>{viewMode === 'production' ? '→' : '←'}</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Alert Banner */}
-        <View style={[styles.alertBanner, { backgroundColor: theme.colors.highlightBg }]}>
-          <View style={styles.alertContent}>
-            <Text style={styles.alertIcon}>ℹ️</Text>
-            <Text style={[styles.alertText, { color: theme.colors.text }]}>
-              {loading ? 'Loading production data...' : `Showing ${productionData.length} data points`}
+      {/* Chart Legend */}
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendSwatch, { backgroundColor: '#16a34a' }]} />
+          <Text style={styles.legendLabel}>Production</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendSwatch, { backgroundColor: '#ef4444' }]} />
+          <Text style={styles.legendLabel}>Scrap</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendSwatch, { backgroundColor: '#facc15' }]} />
+          <Text style={styles.legendLabel}>Downtime</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View
+            style={[
+              styles.legendSwatch,
+              {
+                backgroundColor: '#3b82f6',
+                borderStyle: 'dashed',
+                borderWidth: 1.5,
+                borderColor: '#3b82f6',
+              },
+            ]}
+          />
+          <Text style={styles.legendLabel}>Hourly Goal</Text>
+        </View>
+      </View>
+
+      {/* Chart - Fixed position */}
+      <View style={styles.chartContainer} {...panResponder.current.panHandlers}>
+        {(loading && viewMode === 'production') || (faultsLoading && viewMode === 'faults') ? (
+          <View
+            style={{
+              height: 240,
+              backgroundColor: theme.colors.backgroundNeutral,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <ActivityIndicator size="large" color={theme.colors.accent} />
+            <Text style={{ color: theme.colors.neutralText, fontSize: 14, marginTop: 8 }}>
+              {viewMode === 'production' ? 'Loading production data...' : 'Loading faults...'}
             </Text>
           </View>
-          <TouchableOpacity>
-            <Text style={styles.alertClose}>×</Text>
-          </TouchableOpacity>
-        </View>
+        ) : viewMode === 'production' ? (
+          <ProductionChart data={chartData} partsHourlyGoal={partsHourlyGoal} />
+        ) : (
+          <FaultDowntimeChart data={chartFaultPoints} metric={sortBy} />
+        )}
+      </View>
 
-        {/* Shift Tabs */}
-        <ShiftTabs active={shiftView} onChange={setShiftView} />
+      {/* Table Section Title - Fixed */}
+      {viewMode === 'production' && (
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+          Hourly Stats ({tableDate})
+        </Text>
+      )}
 
-        {/* Chart */}
-        <View style={styles.chartContainer}>
-          {loading ? (
-            <View
-              style={{
-                height: 240,
-                backgroundColor: theme.colors.backgroundNeutral,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <ActivityIndicator size="large" color={theme.colors.accent} />
-              <Text style={{ color: theme.colors.neutralText, fontSize: 14, marginTop: 8 }}>
-                Loading chart data...
-              </Text>
+      {viewMode === 'faults' && (
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+          Fault Breakdown (Top 5)
+        </Text>
+      )}
+
+      {/* Table Header - Fixed */}
+      {viewMode === 'production' && (
+        <View style={styles.tableHeaderWrapper}>
+          <View
+            style={[
+              styles.tableHeaderContainer,
+              {
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.background,
+              },
+            ]}
+          >
+            <View style={styles.tableHeaderRow}>
+              <TouchableOpacity
+                onPress={() => setHourSortOrder(hourSortOrder === 'asc' ? 'desc' : 'asc')}
+                style={styles.sortableHeader}
+              >
+                <Text style={[styles.tableHeaderCell, styles.activeSort]}>
+                  Hour {hourSortOrder === 'asc' ? '▲' : '▼'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.tableHeaderCell}>Production</Text>
+              <Text style={styles.tableHeaderCell}>Scrap</Text>
+              <Text style={styles.tableHeaderCell}>Downtime</Text>
+              <Text style={styles.tableHeaderCell}>Goal</Text>
             </View>
-          ) : (
-            <ProductionChart data={chartData} />
-          )}
-        </View>
-
-        {/* Legend */}
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: '#16a34a' }]} />
-            <Text style={styles.legendLabel}>Good Parts</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: '#ef4444' }]} />
-            <Text style={styles.legendLabel}>Scrap</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: '#facc15' }]} />
-            <Text style={styles.legendLabel}>Downtime (min)</Text>
           </View>
         </View>
+      )}
 
-        {/* Hourly Stats */}
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Hourly Stats</Text>
-        <HourlyStatsTable rows={hourlyRows} />
-      </ScrollView>
-    </View>
+      {viewMode === 'faults' && (
+        <View style={styles.tableHeaderWrapper}>
+          <View
+            style={[
+              styles.tableHeaderContainer,
+              {
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.background,
+              },
+            ]}
+          >
+            <View style={styles.faultTableHeaderRow}>
+              <Text style={styles.faultTableHeaderCell}>Fault Description</Text>
+              <TouchableOpacity onPress={() => setSortBy('count')} style={styles.sortableHeader}>
+                <Text
+                  style={[
+                    styles.faultTableHeaderCellCenter,
+                    sortBy === 'count' && styles.activeSort,
+                  ]}
+                >
+                  Count {sortBy === 'count' ? '▼' : ''}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSortBy('downtime')} style={styles.sortableHeader}>
+                <Text
+                  style={[
+                    styles.faultTableHeaderCellRight,
+                    sortBy === 'downtime' && styles.activeSort,
+                  ]}
+                >
+                  Downtime {sortBy === 'downtime' ? '▼' : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Scrollable Table Body */}
+      {viewMode === 'production' && (
+        <ScrollView
+          style={styles.tableScrollView}
+          showsVerticalScrollIndicator={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refetch}
+              tintColor="#007AFF"
+              colors={['#007AFF']}
+            />
+          }
+          alwaysBounceVertical={true}
+        >
+          <View style={styles.tableBodyWrapper}>
+            {hourlyRows.map((item, index) => (
+              <View
+                key={`${item.hour}-${index}`}
+                style={[
+                  styles.tableRow,
+                  { borderBottomColor: theme.colors.backgroundNeutral },
+                  index % 2 === 0 && { backgroundColor: theme.colors.backgroundNeutral },
+                ]}
+              >
+                <Text style={[styles.tableCell, { color: theme.colors.text }]}>{item.hour}</Text>
+                <Text style={[styles.tableCell, { color: theme.colors.text }]}>
+                  {item.production}
+                </Text>
+                <Text style={[styles.tableCell, { color: theme.colors.text }]}>{item.scrap}</Text>
+                <Text style={[styles.tableCell, { color: theme.colors.text }]}>
+                  {item.downtime > 0 ? `${item.downtime}m` : '-'}
+                </Text>
+                <Text style={[styles.tableCell, { color: theme.colors.text }]}>
+                  {partsHourlyGoal}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+
+      {viewMode === 'faults' && (
+        <ScrollView
+          style={styles.tableScrollView}
+          showsVerticalScrollIndicator={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={faultsLoading}
+              onRefresh={refetchFaults}
+              tintColor="#007AFF"
+              colors={['#007AFF']}
+            />
+          }
+          alwaysBounceVertical={true}
+        >
+          <View style={styles.tableBodyWrapper}>
+            {tableFaultPoints.map((fault, index) => (
+              <View
+                key={`${fault.description}-${index}`}
+                style={[
+                  styles.faultTableRow,
+                  { borderBottomColor: theme.colors.backgroundNeutral },
+                  index % 2 === 0 && { backgroundColor: theme.colors.backgroundNeutral },
+                ]}
+              >
+                <Text style={[styles.faultTableCell, { color: theme.colors.text }]}>
+                  {fault.description}
+                </Text>
+                <Text style={[styles.faultTableCellCenter, { color: theme.colors.text }]}>
+                  {fault.count}
+                </Text>
+                <Text style={[styles.faultTableCellRight, { color: theme.colors.text }]}>
+                  {Math.round(fault.seconds / 60)}m
+                </Text>
+              </View>
+            ))}
+            {hasMoreFaults && (
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={() => setShowAllFaults(!showAllFaults)}
+              >
+                <Text style={styles.moreButtonText}>
+                  {showAllFaults ? 'Show Less' : `More (${faultPoints.length - 5} additional)`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+      )}
+    </SafeAreaView>
   );
 };
 
@@ -275,8 +722,23 @@ const styles = StyleSheet.create({
   commentIcon: {
     fontSize: 24,
   },
+  logoutButton: {
+    backgroundColor: '#c62828',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   scrollView: {
     flex: 1,
+  },
+  tableScrollView: {
+    flex: 1,
+    marginBottom: 16,
   },
   alertBanner: {
     flexDirection: 'row',
@@ -284,7 +746,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#DBEAFE',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 8,
@@ -309,12 +771,15 @@ const styles = StyleSheet.create({
   chartContainer: {
     marginTop: 16,
     paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   legendRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     marginTop: 12,
+    marginBottom: 8,
     gap: 16,
   },
   legendItem: {
@@ -338,6 +803,162 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
     color: '#000000',
+  },
+  tableHeaderWrapper: {
+    paddingHorizontal: 16,
+  },
+  tableHeaderContainer: {
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E5E7EB',
+  },
+  tableHeaderCell: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#000000',
+  },
+  faultTableHeaderRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E5E7EB',
+  },
+  faultTableHeaderCell: {
+    flex: 3,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'left',
+    color: '#000000',
+  },
+  faultTableHeaderCellCenter: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#000000',
+  },
+  faultTableHeaderCellRight: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'right',
+    color: '#000000',
+  },
+  faultTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+  },
+  faultTableCell: {
+    flex: 3,
+    fontSize: 13,
+    textAlign: 'left',
+  },
+  faultTableCellCenter: {
+    flex: 1,
+    fontSize: 13,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  faultTableCellRight: {
+    flex: 1,
+    fontSize: 13,
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  tableBodyWrapper: {
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: '#E5E7EB',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+  },
+  tableCell: {
+    flex: 1,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  modeToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  modeToggleLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  modeActive: {
+    color: '#000',
+    textDecorationLine: 'underline',
+  },
+  modeToggleSeparator: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  modeHint: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginLeft: 8,
+  },
+  modeArrowButton: {
+    marginLeft: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+  },
+  modeArrowText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  moreButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  moreButtonText: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '600',
+  },
+  sortableHeader: {
+    flex: 1,
+  },
+  activeSort: {
+    color: '#2563EB',
+    fontWeight: '700',
   },
 });
 

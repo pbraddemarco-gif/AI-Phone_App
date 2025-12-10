@@ -56,7 +56,8 @@ export function useShiftProductionComparison(
         }
       } catch (err) {
         if (!isCancelled) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to fetch shift comparison data';
+          const errorMessage =
+            err instanceof Error ? err.message : 'Failed to fetch shift comparison data';
           setError(errorMessage);
           console.error('❌ useShiftProductionComparison: Error', errorMessage);
         }
@@ -85,7 +86,7 @@ export function useShiftProductionComparison(
   // Manual refetch function
   const refetch = () => {
     console.log('🔄 useShiftProductionComparison: Manual refetch triggered');
-    setRefetchTrigger(prev => prev + 1);
+    setRefetchTrigger((prev) => prev + 1);
   };
 
   return { data, loading, error, refetch };
