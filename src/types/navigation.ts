@@ -12,4 +12,31 @@ export type RootStackParamList = {
   MachineShiftComparison: { machineId: number };
   PlantLayout: { machineId?: number; machineName?: string };
   ProductionOrders: undefined;
+  Actions:
+    | {
+        machineId?: number;
+        machineName?: string;
+        customerId?: number;
+        customerName?: string;
+        plantId?: number;
+        plantName?: string;
+        selectedMachines?: ActionMachineSelection[];
+      }
+    | undefined;
+  ActionMachinePicker:
+    | {
+        customerId?: number;
+        customerName?: string;
+        plantId?: number;
+        plantName?: string;
+        initialSelected?: ActionMachineSelection[];
+      }
+    | undefined;
+};
+
+export type ActionMachineSelection = {
+  machineId: number;
+  name: string;
+  isLine?: boolean;
+  parentLineId?: number | null;
 };

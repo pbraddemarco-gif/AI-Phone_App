@@ -1,33 +1,35 @@
 /**
  * Axios API clients with automatic Bearer token injection.
- * For web (Expo Web / browser) we must route through the local proxy to avoid CORS.
- * If EXPO_PUBLIC_* env vars are missing we fall back to localhost proxy defaults.
+ * In development, route through the local proxy (localhost:3001) to handle CORS and centralize auth.
+ * In production, connect directly to upstream servers.
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 
-// Upstream (native direct calls) endpoints
-const AUTH_BASE_URL = 'https://app.automationintellect.com/api';
-const DATA_BASE_URL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
+// Production/Direct endpoints (bypass proxy)
+const PROD_AUTH_BASE_URL = 'https://app.automationintellect.com/api';
+const PROD_DATA_BASE_URL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
 
-// Web proxy enforced bases (proxy/server.js). We prefer explicit env values; fallback if absent.
+// Local development proxy endpoints
+const DEV_PROXY_AUTH = 'http://localhost:3001/api/auth';
+const DEV_PROXY_DATA = 'http://localhost:3001/api/data';
+
+// Check if we're in development mode
+const isDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+
+// Override with explicit env vars if provided
 const envAuth = process.env.EXPO_PUBLIC_AUTH_BASE;
 const envData = process.env.EXPO_PUBLIC_API_BASE;
-const proxyAuthFallback = 'http://localhost:3001/api/auth';
-const proxyDataFallback = 'http://localhost:3001/api/data';
 
-const usingWeb = Platform.OS === 'web';
-const resolvedAuthBase = usingWeb ? envAuth || proxyAuthFallback : envAuth || AUTH_BASE_URL;
-const resolvedDataBase = usingWeb ? envData || proxyDataFallback : envData || DATA_BASE_URL;
+// Determine which endpoints to use
+const resolvedAuthBase = envAuth || (isDevelopment ? DEV_PROXY_AUTH : PROD_AUTH_BASE_URL);
+const resolvedDataBase = envData || (isDevelopment ? DEV_PROXY_DATA : PROD_DATA_BASE_URL);
 
-if (usingWeb) {
-  if (!envAuth)
-    console.warn('[apiClient] EXPO_PUBLIC_AUTH_BASE missing; using fallback', proxyAuthFallback);
-  if (!envData)
-    console.warn('[apiClient] EXPO_PUBLIC_API_BASE missing; using fallback', proxyDataFallback);
-}
+console.log('[apiClient] Environment: development=' + isDevelopment);
+console.log('[apiClient] Using proxy auth:', resolvedAuthBase === DEV_PROXY_AUTH);
+console.log('[apiClient] Using proxy data:', resolvedDataBase === DEV_PROXY_DATA);
 
 /**
  * Main API client (data)
@@ -82,4 +84,4 @@ apiClient.interceptors.response.use((response) => response, unauthorizedIntercep
 authApiClient.interceptors.request.use(tokenInterceptor, (error) => Promise.reject(error));
 authApiClient.interceptors.response.use((response) => response, unauthorizedInterceptor);
 
-export { AUTH_BASE_URL, DATA_BASE_URL };
+export { PROD_AUTH_BASE_URL, PROD_DATA_BASE_URL };

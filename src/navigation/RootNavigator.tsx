@@ -15,6 +15,8 @@ import { MachineShiftComparisonScreen } from '../screens/MachineShiftComparisonS
 import PlantLayoutScreen from '../screens/PlantLayoutScreen';
 import CustomerSelectorScreen from '../screens/CustomerSelectorScreen';
 import ProductionOrdersScreen from '../screens/ProductionOrdersScreen';
+import ActionsScreen from '../screens/ActionsScreen';
+import ActionMachinePickerScreen from '../screens/ActionMachinePickerScreen';
 import { RootStackParamList } from '../types/navigation';
 import { authService } from '../services/authService';
 import { DEV_FLAGS } from '../config/devFlags';
@@ -106,6 +108,12 @@ export default function RootNavigator() {
             name="ProductionOrders"
             component={ProductionOrdersScreen}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen name="Actions" component={ActionsScreen} options={{ title: 'Actions' }} />
+          <Stack.Screen
+            name="ActionMachinePicker"
+            component={ActionMachinePickerScreen}
+            options={{ title: 'Select Machines' }}
           />
           <Stack.Screen name="Details" component={DetailsScreen} options={{ title: 'Details' }} />
         </>

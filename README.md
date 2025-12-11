@@ -55,38 +55,11 @@ Use `useAppTheme()` hook to access colors from `src/config/theme.ts`.
 
 ## Development Proxy & One-Step Reset (Web CORS Bypass)
 
-To view live API data in the browser without CORS errors, run the local reverse proxy:
+See also [STARTUP_GUIDE.md](STARTUP_GUIDE.md) for the full step-by-step.
 
-1. Install dependencies (already added to package.json):
+### Single Command (Recommended)
 
-```bash
-npm install
-```
-
-2. Start the proxy (forwarding to upstream auth + data endpoints):
-
-```bash
-npm run proxy
-```
-
-3. In a separate terminal, set Expo public env vars to route web requests through the proxy, then start Expo:
-
-```powershell
-$env:EXPO_PUBLIC_API_BASE="http://localhost:3001/api/data"
-$env:EXPO_PUBLIC_AUTH_BASE="http://localhost:3001/api/auth"
-npm start
-```
-
-The app (web only) will use `EXPO_PUBLIC_API_BASE` and `EXPO_PUBLIC_AUTH_BASE` instead of the hardcoded upstream URLs. Native (iOS/Android) continues to hit upstream directly.
-
-### One-Step Reset & Start (Recommended)
-
-Use the automated reset script to:
-
-1. Kill lingering processes on ports 3001 / 8081 / 8082.
-2. Restart the proxy and wait for health.
-3. Set `EXPO_PUBLIC_API_BASE` + `EXPO_PUBLIC_AUTH_BASE`.
-4. Launch Expo.
+Use the reset script to kill lingering ports (3001/8081/8082), start the proxy, wait for health, set Expo env vars, and launch Expo:
 
 ```bash
 npm run dev:reset
@@ -100,26 +73,31 @@ npm run dev:reset -- --clear    # clear Metro cache
 npm run dev:reset -- --web --clear
 ```
 
-Script location: `scripts/reset-dev.ps1`.
+Script: `scripts/reset-dev.ps1` (Windows PowerShell).
 
-### Separate Start (Manual)
+### Manual Fallback
 
-1. `npm run proxy`
-2. In a second terminal set env vars then `npm start`.
+1. Install deps (first time): `npm install`
+2. Terminal A: `npm run proxy`
+3. Terminal B:
 
-Proxy code: `proxy/server.js` – maps `/api/data` and `/api/auth` to the real backends and injects permissive CORS headers for development.
+```powershell
+$env:EXPO_PUBLIC_API_BASE="http://localhost:3001/api/data"
+$env:EXPO_PUBLIC_AUTH_BASE="http://localhost:3001/api/auth"
+npm start
+```
 
-Health check: visit `http://localhost:3001/health` in the browser.
+Health check: `http://localhost:3001/health` should return `{ ok: true }`.
 
-Disable proxy by omitting the env vars or use plain `npm start`; the app falls back to original URLs.
+Proxy code: `proxy/server.js` maps `/api/data`, `/api/auth`, `/api/plant` to upstreams and injects permissive CORS headers for development.
 
 ### Automatic Web Fallback
 
-If you forget to set env vars on web, the clients now fall back to `http://localhost:3001/api/auth` and `http://localhost:3001/api/data` automatically. Make sure the proxy is running (`npm run proxy` or `npm run dev:reset`) or login will fail.
+If you forget env vars on web, the clients fall back to `http://localhost:3001/api/auth` and `http://localhost:3001/api/data`. Ensure the proxy is running (`npm run proxy` or `npm run dev:reset`) or login will fail.
 
 ### Legacy Manual Combined Start
 
-You can still run both manually or with the existing concurrent script:
+You can still run both with the concurrent script:
 
 ```bash
 npm run dev

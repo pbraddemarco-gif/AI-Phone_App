@@ -20,6 +20,7 @@ import { useAppTheme } from '../hooks/useAppTheme';
 import { DEV_FLAGS } from '../config/devFlags';
 import { authService } from '../services/authService';
 import { useMachineInventory } from '../hooks/useMachineInventory';
+import { getMachineInventory, MachineInventoryItem } from '../services/machineInventoryService';
 import { getMachinePerformance } from '../services/machinePerformanceService';
 import { MiniProductionBar } from '../components/MiniProductionBar';
 import { productionService } from '../services/productionService';
@@ -50,6 +51,10 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
   // One-shot refresh feedback state
   const [refreshFlash, setRefreshFlash] = useState(false);
   const [machineStatuses, setMachineStatuses] = useState<Map<number, MachineStatus>>(new Map());
+  const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set());
+  const [lineChildren, setLineChildren] = useState<Record<number, MachineInventoryItem[]>>({});
+  const [lineLoadingId, setLineLoadingId] = useState<number | null>(null);
+  const [lineError, setLineError] = useState<Record<number, string | null>>({});
 
   // Load selected customer and available customers on mount
   useEffect(() => {
@@ -227,14 +232,17 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     }
   };
 
-  const fetchMachineStatuses = async () => {
-    if (machines.length === 0) return;
+  const fetchMachineStatuses = async (targetMachines?: MachineInventoryItem[]) => {
+    const source = targetMachines || machines;
+    if (source.length === 0) return;
     try {
-      const ids = machines.map((m) => m.MachineId.toString());
+      const ids = source.map((m) => m.MachineId.toString());
       const statuses = await productionService.getMachineStatus(ids);
-      const statusMap = new Map<number, MachineStatus>();
-      statuses.forEach((status) => statusMap.set(status.Id, status));
-      setMachineStatuses(statusMap);
+      setMachineStatuses((prev) => {
+        const next = new Map(prev);
+        statuses.forEach((status) => next.set(status.Id, status));
+        return next;
+      });
     } catch (err) {
       console.error('Failed to fetch machine statuses:', err);
     }
@@ -245,6 +253,14 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
       fetchMachineStatuses();
     }
   }, [machines]);
+
+  // Reset expanded state when plant or shift changes
+  useEffect(() => {
+    setExpandedLines(new Set());
+    setLineChildren({});
+    setLineLoadingId(null);
+    setLineError({});
+  }, [selectedCustomer?.Id, shiftView]);
 
   // Header performance info (split client & plant/machine)
   const [clientName, setClientName] = useState<string>('Loading…');
@@ -368,6 +384,8 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     const displayName = item.DisplayName || item.MachineName || `Machine ${item.MachineId}`;
     const statusColor = getStatusColor(item);
     const backgroundColor = getRowBackgroundColor(item);
+    const isLine = item?.MachineType?.Name === 'DiscreteLine';
+    const isExpanded = expandedLines.has(item.MachineId);
 
     console.log('📊 Machine item data:', {
       name: displayName,
@@ -407,50 +425,199 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     const downtime = formatDowntime(item.DownTime);
     const scrap = item.RejectParts || 0;
 
+    const handleLineToggle = async () => {
+      const alreadyExpanded = expandedLines.has(item.MachineId);
+      if (alreadyExpanded) {
+        const next = new Set(expandedLines);
+        next.delete(item.MachineId);
+        setExpandedLines(next);
+        return;
+      }
+
+      setLineLoadingId(item.MachineId);
+      setLineError((prev) => ({ ...prev, [item.MachineId]: null }));
+
+      try {
+        const children = await getMachineInventory(item.MachineId, shiftView);
+        const childMachines = children.filter((child) => {
+          const isMachine = child.MachineType?.Name === 'StandardOEE';
+          const belongsToLine =
+            child.ParentMachineId === item.MachineId ||
+            child.ParentMachineName === item.DisplayName;
+          return isMachine && (belongsToLine || child.ParentMachineId);
+        });
+        setLineChildren((prev) => ({ ...prev, [item.MachineId]: childMachines }));
+        setExpandedLines((prev) => new Set(prev).add(item.MachineId));
+        await fetchMachineStatuses(childMachines);
+      } catch (err: any) {
+        console.error('❌ Failed to load machines for line:', err);
+        setLineError((prev) => ({
+          ...prev,
+          [item.MachineId]: err?.message || 'Failed to load machines for this line',
+        }));
+      } finally {
+        setLineLoadingId(null);
+      }
+    };
+
     return (
-      <TouchableOpacity
-        style={[
-          styles.row,
-          {
-            borderLeftColor: statusColor,
-            borderLeftWidth: 4,
-            backgroundColor,
-          },
-        ]}
-        onPress={() => {
-          try {
-            console.log('🖱️ Row tapped:', {
-              machineId: item.MachineId,
-              machineName: displayName,
-              type: item?.MachineType?.Name,
-              partsHourlyGoal: item.PartsHourlyGoal,
-            });
-            navigation.navigate('ProductionDashboard', {
-              machineId: item.MachineId,
-              machineName: displayName,
-              partsHourlyGoal: item.PartsHourlyGoal || 0,
-            });
-          } catch (e) {
-            console.error('❌ Navigation tap handler error:', e);
-          }
-        }}
-      >
-        <View style={styles.nameColumn}>
-          <Text style={styles.machineName}>{displayName}</Text>
-          <MiniProductionBar current={item.TotalParts || 0} goal={adjustedGoal || 0} />
-        </View>
-        <View style={styles.prodColumn}>
-          <Text style={styles.cellText}>{prodGoal}</Text>
-        </View>
-        <View style={styles.downtimeColumn}>
-          <Text style={[styles.cellText, downtime !== '0m' && styles.downtimeText]}>
-            {downtime}
-          </Text>
-        </View>
-        <View style={styles.scrapColumn}>
-          <Text style={styles.cellText}>{scrap}</Text>
-        </View>
-      </TouchableOpacity>
+      <View>
+        <TouchableOpacity
+          style={[
+            styles.row,
+            {
+              borderLeftColor: statusColor,
+              borderLeftWidth: 4,
+              backgroundColor,
+            },
+          ]}
+          onPress={() => {
+            try {
+              console.log('🖱️ Row tapped:', {
+                machineId: item.MachineId,
+                machineName: displayName,
+                type: item?.MachineType?.Name,
+                partsHourlyGoal: item.PartsHourlyGoal,
+              });
+
+              if (isLine) {
+                navigation.navigate('ProductionDashboard', {
+                  machineId: item.MachineId,
+                  machineName: displayName,
+                  partsHourlyGoal: item.PartsHourlyGoal || 0,
+                });
+                return;
+              }
+
+              navigation.navigate('ProductionDashboard', {
+                machineId: item.MachineId,
+                machineName: displayName,
+                partsHourlyGoal: item.PartsHourlyGoal || 0,
+              });
+            } catch (e) {
+              console.error('❌ Navigation tap handler error:', e);
+            }
+          }}
+        >
+          <View style={styles.nameColumn}>
+            <View style={styles.lineLabelRow}>
+              {isLine ? (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleLineToggle();
+                  }}
+                  style={styles.lineArrowHit}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.lineArrow}>{isExpanded ? '▼' : '▶'}</Text>
+                </TouchableOpacity>
+              ) : null}
+              <Text style={styles.machineName}>{displayName}</Text>
+            </View>
+            <MiniProductionBar current={item.TotalParts || 0} goal={adjustedGoal || 0} />
+          </View>
+          <View style={styles.prodColumn}>
+            <Text style={styles.cellText}>{prodGoal}</Text>
+          </View>
+          <View style={styles.downtimeColumn}>
+            <Text style={[styles.cellText, downtime !== '0m' && styles.downtimeText]}>
+              {downtime}
+            </Text>
+          </View>
+          <View style={styles.scrapColumn}>
+            <Text style={styles.cellText}>{scrap}</Text>
+          </View>
+        </TouchableOpacity>
+
+        {isLine && isExpanded ? (
+          <View style={styles.lineChildrenContainer}>
+            {lineLoadingId === item.MachineId ? (
+              <View style={styles.lineChildLoading}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.lineChildLoadingText}>Loading machines in this line...</Text>
+              </View>
+            ) : lineError[item.MachineId] ? (
+              <Text style={styles.lineChildError}>⚠️ {lineError[item.MachineId]}</Text>
+            ) : lineChildren[item.MachineId]?.length ? (
+              lineChildren[item.MachineId].map((child) => {
+                const childDisplay =
+                  child.DisplayName || child.MachineName || `Machine ${child.MachineId}`;
+                const childStatusColor = getStatusColor(child);
+                const childBg = getRowBackgroundColor(child);
+
+                // Child metrics mirror main rows
+                let childAdjustedGoal = child.PartsDailyGoal;
+                if (shiftView === 'current' && child.PartsHourlyGoal && child.ShiftStart) {
+                  try {
+                    const shiftStartTime = new Date(child.ShiftStart);
+                    const now = new Date();
+                    const hoursElapsed =
+                      (now.getTime() - shiftStartTime.getTime()) / (1000 * 60 * 60);
+                    if (hoursElapsed > 0) {
+                      childAdjustedGoal = child.PartsHourlyGoal * hoursElapsed;
+                    }
+                  } catch (e) {
+                    console.error('Failed to calc child adjusted goal:', e);
+                  }
+                }
+
+                const childProdGoal =
+                  child.TotalParts !== undefined
+                    ? childAdjustedGoal
+                      ? `${child.TotalParts}/${Math.round(childAdjustedGoal)}`
+                      : `${child.TotalParts}`
+                    : '-';
+                const childDowntime = formatDowntime(child.DownTime);
+                const childScrap = child.RejectParts || 0;
+
+                return (
+                  <TouchableOpacity
+                    key={child.MachineId}
+                    style={[
+                      styles.lineChildRow,
+                      { borderLeftColor: childStatusColor, backgroundColor: childBg },
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('ProductionDashboard', {
+                        machineId: child.MachineId,
+                        machineName: childDisplay,
+                        partsHourlyGoal: child.PartsHourlyGoal || 0,
+                      })
+                    }
+                  >
+                    <View style={styles.lineChildNameCol}>
+                      <Text style={styles.lineChildName}>{childDisplay}</Text>
+                      <MiniProductionBar
+                        current={child.TotalParts || 0}
+                        goal={childAdjustedGoal || 0}
+                      />
+                    </View>
+                    <View style={styles.lineChildProdCol}>
+                      <Text style={styles.lineChildMeta}>{childProdGoal}</Text>
+                    </View>
+                    <View style={styles.lineChildDowntimeCol}>
+                      <Text
+                        style={[
+                          styles.lineChildMeta,
+                          childDowntime !== '0m' && styles.downtimeText,
+                        ]}
+                      >
+                        {childDowntime}
+                      </Text>
+                    </View>
+                    <View style={styles.lineChildScrapCol}>
+                      <Text style={styles.lineChildMeta}>{childScrap}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <Text style={styles.lineChildEmpty}>No machines returned for this line.</Text>
+            )}
+          </View>
+        ) : null}
+      </View>
     );
   };
 
@@ -503,20 +670,22 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
                 <Text style={styles.clientTitle}>{selectedCompany}</Text>
                 <Text style={styles.dropdownArrow}>▼</Text>
               </TouchableOpacity>
-              {/* Plant selector line */}
-              <TouchableOpacity
-                onPress={() => {
-                  setShowPlantDropdown((v) => !v);
-                  setShowCompanyDropdown(false);
-                }}
-                accessibilityLabel="Select plant"
-                style={styles.customerLineButton}
-              >
-                <Text style={styles.plantSubtitle}>
-                  {selectedPlant?.DisplayName || selectedCustomer?.DisplayName || 'Select plant...'}
-                </Text>
-                <Text style={styles.dropdownArrow}>▼</Text>
-              </TouchableOpacity>
+              {/* Plant selector line - only show if we have a selected plant or customer with DisplayName */}
+              {(selectedPlant?.DisplayName || selectedCustomer?.DisplayName) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowPlantDropdown((v) => !v);
+                    setShowCompanyDropdown(false);
+                  }}
+                  accessibilityLabel="Select plant"
+                  style={styles.customerLineButton}
+                >
+                  <Text style={styles.plantSubtitle}>
+                    {selectedPlant?.DisplayName || selectedCustomer?.DisplayName}
+                  </Text>
+                  <Text style={styles.dropdownArrow}>▼</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : selectedCustomer ? (
             <View style={styles.customerTitleContainer}>
@@ -548,6 +717,20 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
               accessibilityLabel="View production orders"
             >
               <Text style={styles.plantLayoutIcon}>📋</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.plantLayoutButton}
+              onPress={() =>
+                navigation.navigate('Actions', {
+                  customerId: selectedCustomer?.Id,
+                  customerName: selectedCustomer?.Name,
+                  plantId: selectedCustomer?.Id,
+                  plantName: selectedCustomer?.DisplayName,
+                })
+              }
+              accessibilityLabel="Create or view actions"
+            >
+              <Text style={styles.plantLayoutIcon}>📝</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.plantLayoutButton}
@@ -1028,6 +1211,21 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
     alignItems: 'center',
   },
+  lineLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  lineArrow: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '700',
+    marginRight: 6,
+  },
+  lineArrowHit: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   nameColumn: {
     flex: 2,
   },
@@ -1055,6 +1253,70 @@ const styles = StyleSheet.create({
   downtimeText: {
     color: '#DC2626',
     fontWeight: '500',
+  },
+  lineChildrenContainer: {
+    marginHorizontal: 16,
+    marginTop: -4,
+    marginBottom: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  lineChildRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#E5E7EB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  lineChildNameCol: {
+    flex: 2,
+  },
+  lineChildProdCol: {
+    flex: 1.2,
+    alignItems: 'center',
+  },
+  lineChildDowntimeCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  lineChildScrapCol: {
+    flex: 0.8,
+    alignItems: 'center',
+  },
+  lineChildName: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  lineChildMeta: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  lineChildLoading: {
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  lineChildLoadingText: {
+    fontSize: 12,
+    color: '#374151',
+  },
+  lineChildError: {
+    padding: 12,
+    color: '#991B1B',
+    fontSize: 12,
+  },
+  lineChildEmpty: {
+    padding: 12,
+    fontSize: 12,
+    color: '#6B7280',
   },
   loadingContainer: {
     flex: 1,

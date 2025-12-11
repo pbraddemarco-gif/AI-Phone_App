@@ -23,7 +23,10 @@
       "bundleIdentifier": "com.automationintellect.aiproductionmonitor",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Allow the app to capture photos for uploaded actions.",
+        "NSPhotoLibraryUsageDescription": "Allow the app to pick images from your library for uploaded actions.",
+        "NSPhotoLibraryAddUsageDescription": "Allow the app to save captured photos to your library."
       }
     },
     "android": {
@@ -37,7 +40,7 @@
     "web": {
       "bundler": "metro"
     },
-    "plugins": ["expo-secure-store"],
+    "plugins": ["expo-secure-store", "expo-image-picker"],
     "extra": {
       "eas": {
         "projectId": "c8a91170-3131-42db-ac96-ea600a7a48fd"

@@ -28,6 +28,8 @@
     "@react-navigation/native-stack": "^7.6.4",
     "axios": "^1.13.2",
     "expo": "^54.0.25",
+    "expo-document-picker": "^14.0.8",
+    "expo-image-picker": "^17.0.9",
     "expo-secure-store": "~15.0.7",
     "express-rate-limit": "^8.2.1",
     "morgan": "^1.10.1",
