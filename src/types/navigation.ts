@@ -30,6 +30,7 @@ export type RootStackParamList = {
         plantId?: number;
         plantName?: string;
         initialSelected?: ActionMachineSelection[];
+        onSelectMachines?: (selections: ActionMachineSelection[]) => void;
       }
     | undefined;
 };

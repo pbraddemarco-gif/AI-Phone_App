@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CommonActions } from '@react-navigation/native';
 import { RootStackParamList, ActionMachineSelection } from '../types/navigation';
 import { getMachineInventory, MachineInventoryItem } from '../services/machineInventoryService';
 import { useAppTheme } from '../hooks/useAppTheme';
@@ -21,12 +22,24 @@ export type ActionMachinePickerProps = NativeStackScreenProps<
 
 export default function ActionMachinePickerScreen({ navigation, route }: ActionMachinePickerProps) {
   const theme = useAppTheme();
-  const { plantId, plantName, initialSelected } = route.params || {};
+  const { plantId, plantName, initialSelected, onSelectMachines } = route.params || {};
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [machines, setMachines] = useState<MachineInventoryItem[]>([]);
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set());
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [lineChildren, setLineChildren] = useState<Record<number, MachineInventoryItem[]>>({});
+  const [lineLoading, setLineLoading] = useState<Record<number, boolean>>({});
+  const [lineError, setLineError] = useState<Record<number, string | null>>({});
+
+  const allMachines = useMemo(() => {
+    const map = new Map<number, MachineInventoryItem>();
+    machines.forEach((m) => map.set(m.MachineId, m));
+    Object.values(lineChildren)
+      .flat()
+      .forEach((m) => map.set(m.MachineId, m));
+    return Array.from(map.values());
+  }, [machines, lineChildren]);
 
   useEffect(() => {
     const defaults = new Set<number>();
@@ -56,32 +69,72 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
     load();
   }, [plantId]);
 
-  const lines = useMemo(
-    () => machines.filter((m) => m.MachineType?.Name === 'DiscreteLine'),
-    [machines]
-  );
+  const topLevel = useMemo(() => {
+    const machineIds = new Set(machines.map((m) => m.MachineId));
+    const parentIds = new Set(
+      machines.map((m) => m.ParentMachineId).filter((p) => p !== null && p !== undefined)
+    );
+
+    return machines.filter((m) => {
+      const isLine = m.MachineType?.Name === 'DiscreteLine';
+      const noParent = m.ParentMachineId === null || m.ParentMachineId === undefined;
+      const parentMissing =
+        m.ParentMachineId !== null &&
+        m.ParentMachineId !== undefined &&
+        !machineIds.has(m.ParentMachineId);
+      // show lines always, standalone machines (no parent), and machines whose parent isn't in the list
+      return isLine || noParent || parentMissing;
+    });
+  }, [machines]);
 
   const childrenMap = useMemo(() => {
     const map: Record<number, MachineInventoryItem[]> = {};
     machines.forEach((m) => {
-      if (m.ParentMachineId) {
+      if (m.ParentMachineId !== null && m.ParentMachineId !== undefined) {
         map[m.ParentMachineId] = map[m.ParentMachineId] || [];
         map[m.ParentMachineId].push(m);
       }
     });
+    // merge any on-demand loaded children
+    Object.entries(lineChildren).forEach(([id, kids]) => {
+      const key = Number(id);
+      if (!map[key]) {
+        map[key] = [];
+      }
+      map[key] = map[key].concat(kids);
+    });
     return map;
-  }, [machines]);
+  }, [machines, lineChildren]);
 
-  const toggleExpand = (lineId: number) => {
+  const toggleExpand = async (lineId: number) => {
     setExpandedLines((prev) => {
       const next = new Set(prev);
       if (next.has(lineId)) next.delete(lineId);
       else next.add(lineId);
       return next;
     });
+
+    const alreadyLoaded = lineChildren[lineId];
+    if (alreadyLoaded) return;
+
+    setLineLoading((prev) => ({ ...prev, [lineId]: true }));
+    setLineError((prev) => ({ ...prev, [lineId]: null }));
+    try {
+      const fetched = await getMachineInventory(lineId, 'current');
+      setLineChildren((prev) => ({ ...prev, [lineId]: fetched }));
+    } catch (e: any) {
+      setLineError((prev) => ({ ...prev, [lineId]: e?.message || 'Failed to load machines' }));
+    } finally {
+      setLineLoading((prev) => ({ ...prev, [lineId]: false }));
+    }
   };
 
   const toggleSelect = (machine: MachineInventoryItem) => {
+    console.log('Toggling selection', {
+      id: machine.MachineId,
+      name: machine.DisplayName || machine.MachineName,
+      isLine: machine.MachineType?.Name === 'DiscreteLine',
+    });
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(machine.MachineId)) next.delete(machine.MachineId);
@@ -92,7 +145,7 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
 
   const handleSave = () => {
     const selections: ActionMachineSelection[] = [];
-    machines.forEach((m) => {
+    allMachines.forEach((m) => {
       if (selected.has(m.MachineId)) {
         selections.push({
           machineId: m.MachineId,
@@ -103,7 +156,23 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
       }
     });
 
-    navigation.navigate('Actions', { selectedMachines: selections }, { merge: true } as any);
+    console.log('Add Selected tapped', {
+      plantId,
+      plantName,
+      initialSelected,
+      selectedIds: Array.from(selected),
+      selectionCount: selections.length,
+      selections,
+      canGoBack: navigation.canGoBack(),
+      hasCallback: !!onSelectMachines,
+    });
+
+    if (onSelectMachines) {
+      onSelectMachines(selections);
+    } else {
+      console.warn('No callback provided; selections will not propagate.');
+    }
+
     navigation.goBack();
   };
 
@@ -112,24 +181,49 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
     const isSelected = selected.has(machine.MachineId);
     const children = childrenMap[machine.MachineId] || [];
     const expanded = expandedLines.has(machine.MachineId);
+    const hasChildren = children.length > 0;
+
     return (
       <View key={machine.MachineId} style={{ marginLeft: depth * 12 }}>
         <TouchableOpacity
           style={[styles.row, isSelected && styles.rowSelected]}
           onPress={() => toggleSelect(machine)}
-          onLongPress={isLine ? () => toggleExpand(machine.MachineId) : undefined}
         >
-          {isLine ? (
-            <Text style={styles.chevron}>{expanded ? '▾' : '▸'}</Text>
-          ) : (
-            <Text style={styles.chevronPlaceholder}>•</Text>
-          )}
-          <View style={styles.checkbox}>
-            {isSelected ? <Text style={styles.check}>✓</Text> : null}
+          <View style={styles.rowLeft}>
+            {isLine ? (
+              <TouchableOpacity
+                onPress={() => toggleExpand(machine.MachineId)}
+                style={styles.lineArrowHit}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.lineArrow}>{expanded ? '▼' : '▶'}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.lineArrowHit} />
+            )}
+            <View style={styles.checkbox}>
+              {isSelected ? <Text style={styles.check}>✓</Text> : null}
+            </View>
+            <Text style={styles.rowLabel}>{machine.DisplayName || machine.MachineName}</Text>
           </View>
-          <Text style={styles.rowLabel}>{machine.DisplayName || machine.MachineName}</Text>
+          {isLine && hasChildren ? <Text style={styles.childCount}>{children.length}</Text> : null}
         </TouchableOpacity>
-        {isLine && expanded ? children.map((child) => renderRow(child, depth + 1)) : null}
+        {isLine && expanded ? (
+          <View style={styles.lineChildrenWrapper}>
+            {lineLoading[machine.MachineId] ? (
+              <View style={styles.lineChildLoading}>
+                <ActivityIndicator size="small" color="#2563EB" />
+                <Text style={styles.lineChildLoadingText}>Loading machines…</Text>
+              </View>
+            ) : lineError[machine.MachineId] ? (
+              <Text style={styles.lineChildError}>⚠️ {lineError[machine.MachineId]}</Text>
+            ) : hasChildren ? (
+              children.map((child) => renderRow(child, depth + 1))
+            ) : (
+              <Text style={styles.lineChildEmpty}>No machines in this line.</Text>
+            )}
+          </View>
+        ) : null}
       </View>
     );
   };
@@ -152,7 +246,11 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContainer}>
-          {lines.map((line) => renderRow(line))}
+          {topLevel.length ? (
+            topLevel.map((item) => renderRow(item))
+          ) : (
+            <Text style={styles.muted}>No lines or machines found for this plant.</Text>
+          )}
         </ScrollView>
       )}
 
@@ -215,6 +313,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+  },
+  lineArrowHit: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lineArrow: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '700',
+  },
   rowSelected: {
     borderColor: '#2563EB',
     backgroundColor: '#EFF6FF',
@@ -249,6 +364,34 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 14,
     color: '#111827',
+  },
+  childCount: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  lineChildrenWrapper: {
+    marginLeft: 30,
+    marginTop: 4,
+    marginBottom: 6,
+    gap: 4,
+  },
+  lineChildLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  lineChildLoadingText: {
+    color: '#6B7280',
+    fontSize: 12,
+  },
+  lineChildError: {
+    color: '#B91C1C',
+    fontSize: 12,
+  },
+  lineChildEmpty: {
+    color: '#6B7280',
+    fontSize: 12,
   },
   footer: {
     flexDirection: 'row',

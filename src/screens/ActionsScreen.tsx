@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList, ActionMachineSelection } from '../types/navigation';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -56,9 +57,20 @@ function isUploadField(field: ActionTemplateField) {
   return name.includes('upload file') || (name.includes('upload') && name.includes('file'));
 }
 
+function isRelatedMachinesField(field: ActionTemplateField) {
+  const display = (field.DisplayName || '').toLowerCase();
+  return display.includes('related to machines');
+}
+
 export default function ActionsScreen({ navigation, route }: ActionsScreenProps) {
   const theme = useAppTheme();
   const routeParams = route.params || {};
+  const [contextParams, setContextParams] = useState({
+    customerId: routeParams.customerId,
+    customerName: routeParams.customerName,
+    plantId: routeParams.plantId,
+    plantName: routeParams.plantName,
+  });
   const [templates, setTemplates] = useState<ActionTemplateSummary[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,10 +91,35 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
   );
 
   useEffect(() => {
-    if (routeParams.selectedMachines) {
+    if (routeParams.selectedMachines !== undefined) {
+      console.log('Actions: received selectedMachines', routeParams.selectedMachines);
       setLinkedMachines(routeParams.selectedMachines);
     }
+    if (
+      routeParams.customerId !== undefined ||
+      routeParams.customerName !== undefined ||
+      routeParams.plantId !== undefined ||
+      routeParams.plantName !== undefined
+    ) {
+      setContextParams((prev) => ({
+        customerId: routeParams.customerId ?? prev.customerId,
+        customerName: routeParams.customerName ?? prev.customerName,
+        plantId: routeParams.plantId ?? prev.plantId,
+        plantName: routeParams.plantName ?? prev.plantName,
+      }));
+    }
   }, [routeParams.selectedMachines]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Actions focus: route params', route.params);
+      const incoming = route.params?.selectedMachines;
+      if (incoming !== undefined) {
+        console.log('Actions focus: pulling selectedMachines', incoming);
+        setLinkedMachines(incoming);
+      }
+    }, [route.params])
+  );
 
   useEffect(() => {
     const loadSummaries = async () => {
@@ -105,6 +142,29 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
     if (selectedId == null) return null;
     return templateCache[selectedId] || null;
   }, [selectedId, templateCache]);
+
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    const relatedField = selectedTemplate.fields.find(isRelatedMachinesField);
+    if (!relatedField) return;
+
+    console.log('Actions: syncing linkedMachines to form', linkedMachines);
+
+    const serialized = JSON.stringify(
+      linkedMachines.map((m) => ({
+        id: m.machineId,
+        name: m.name,
+        isLine: m.isLine,
+        parentLineId: m.parentLineId ?? null,
+      }))
+    );
+
+    setFormState((prev) => {
+      const current = prev[relatedField.FieldName];
+      if (current === serialized) return prev;
+      return { ...prev, [relatedField.FieldName]: serialized };
+    });
+  }, [selectedTemplate, linkedMachines]);
 
   const visibleFields = useMemo(() => {
     if (!selectedTemplate) return [] as ActionTemplateField[];
@@ -459,6 +519,11 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
           <ScrollView contentContainerStyle={styles.formContainer}>
             <Text style={styles.sectionTitle}>Details</Text>
             <View style={styles.card}>
+              {process.env.NODE_ENV !== 'production' ? (
+                <Text style={styles.muted}>
+                  Debug linkedMachines: {JSON.stringify(linkedMachines)}
+                </Text>
+              ) : null}
               {detailLoading ? (
                 <View style={styles.center}>
                   <ActivityIndicator size="small" color="#007AFF" />
@@ -469,6 +534,50 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
               ) : selectedTemplate ? (
                 visibleFields.length > 0 ? (
                   visibleFields.map((field) => {
+                    if (isRelatedMachinesField(field)) {
+                      return (
+                        <View key={field.FieldName} style={styles.fieldRow}>
+                          <View style={styles.inlineLabelRow}>
+                            <Text style={styles.fieldLabel}>{field.DisplayName}</Text>
+                            <TouchableOpacity
+                              style={styles.addLink}
+                              onPress={() =>
+                                navigation.navigate('ActionMachinePicker', {
+                                  customerId: contextParams.customerId,
+                                  customerName: contextParams.customerName,
+                                  plantId: contextParams.plantId,
+                                  plantName: contextParams.plantName,
+                                  initialSelected: linkedMachines,
+                                  onSelectMachines: (selections: ActionMachineSelection[]) => {
+                                    console.log(
+                                      'Actions: callback received selections',
+                                      selections
+                                    );
+                                    setLinkedMachines(selections);
+                                  },
+                                })
+                              }
+                            >
+                              <Text style={styles.addLinkText}>+ Add</Text>
+                            </TouchableOpacity>
+                          </View>
+                          {linkedMachines.length ? (
+                            <View style={styles.selectionChips}>
+                              {linkedMachines.map((m) => (
+                                <View key={m.machineId} style={styles.selectionChip}>
+                                  <Text style={styles.selectionChipText}>
+                                    {m.name}
+                                    {m.isLine ? ' (Line)' : ''}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          ) : (
+                            <Text style={styles.muted}>No machines linked</Text>
+                          )}
+                        </View>
+                      );
+                    }
                     // Skip Action Type (TypeId) since it's implied by template
                     if (field.FieldName === 'TypeId') return null;
 
@@ -737,40 +846,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
                 <Text style={styles.muted}>Select a template to begin.</Text>
               )}
 
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelRow}>
-                  <Text style={styles.fieldLabel}>Linked Lines/Machines</Text>
-                  <TouchableOpacity
-                    style={styles.addLink}
-                    onPress={() =>
-                      navigation.navigate('ActionMachinePicker', {
-                        customerId: routeParams.customerId,
-                        customerName: routeParams.customerName,
-                        plantId: routeParams.plantId,
-                        plantName: routeParams.plantName,
-                        initialSelected: linkedMachines,
-                      })
-                    }
-                  >
-                    <Text style={styles.addLinkText}>+ Add</Text>
-                  </TouchableOpacity>
-                </View>
-                {linkedMachines.length ? (
-                  <View style={styles.selectionChips}>
-                    {linkedMachines.map((m) => (
-                      <View key={m.machineId} style={styles.selectionChip}>
-                        <Text style={styles.selectionChipText}>
-                          {m.name}
-                          {m.isLine ? ' (Line)' : ''}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.muted}>No machines linked</Text>
-                )}
-              </View>
-
               {selectedTemplate && !detailLoading ? (
                 <>
                   {submitError ? <Text style={styles.errorText}>⚠️ {submitError}</Text> : null}
@@ -874,6 +949,13 @@ const styles = StyleSheet.create({
   fieldLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
+  },
+  inlineLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 4,
   },
   fieldLabel: {
