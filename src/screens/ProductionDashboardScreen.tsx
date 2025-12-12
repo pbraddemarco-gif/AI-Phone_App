@@ -103,41 +103,54 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     refetch: refetchStatus,
   } = useMachineStatus({ machineId });
 
-  // Calculate date range based on shift selection
-  const { start, end, dayStart, dayEnd } = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
-    const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
-    const endOfYesterday = new Date(endOfToday.getTime() - 24 * 60 * 60 * 1000);
+  // Build dims[0] from shift schedule: format is "TagId;ShiftId"
+  const { dims0, productionStart, productionEnd } = useMemo(() => {
+    const activeShift = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
 
-    if (shiftView === 'current') {
-      // Last 24 hours (current day)
-      const oneDayAgo = new Date(now);
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-      return {
-        start: oneDayAgo.toISOString(),
-        end: now.toISOString(),
-        dayStart: startOfToday.toISOString(),
-        dayEnd: endOfToday.toISOString(),
-      };
-    } else {
-      // Previous 24 hours (last day)
-      const twoDaysAgo = new Date(now);
-      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-      const oneDayAgo = new Date(now);
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-      return {
-        start: twoDaysAgo.toISOString(),
-        end: oneDayAgo.toISOString(),
-        dayStart: startOfYesterday.toISOString(),
-        dayEnd: endOfYesterday.toISOString(),
-      };
+    console.log('🔄 Recalculating production time range for shiftView:', shiftView);
+
+    if (!activeShift || !activeShift.Items || activeShift.Items.length === 0) {
+      console.log('⚠️ No shift schedule available, using calendar day fallback');
+      // Fallback to calendar day if no shift schedule available
+      const now = new Date();
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+      const endOfYesterday = new Date(endOfToday.getTime() - 24 * 60 * 60 * 1000);
+
+      if (shiftView === 'current') {
+        return {
+          dims0: undefined,
+          productionStart: startOfToday.toISOString(),
+          productionEnd: endOfToday.toISOString(),
+        };
+      } else {
+        return {
+          dims0: undefined,
+          productionStart: startOfYesterday.toISOString(),
+          productionEnd: endOfYesterday.toISOString(),
+        };
+      }
     }
-  }, [shiftView]);
-  // Fault downtime (use full calendar day bounds for consistency)
+
+    const shift = activeShift.Items[0];
+    // Build dims as "TagId;ShiftId" format
+    const dimsValue = `${shift.TagId};${shift.Id}`;
+
+    console.log(
+      `📊 Using shift schedule for ${shiftView}: dims=[${dimsValue}], start=${shift.StartDateTime}, end=${shift.EndDateTime}`
+    );
+
+    return {
+      dims0: dimsValue,
+      productionStart: shift.StartDateTime,
+      productionEnd: shift.EndDateTime,
+    };
+  }, [currentShiftSchedule, lastShiftSchedule, shiftView]);
+
+  // Fault downtime (use shift-based time bounds from shift schedule)
   const {
     data: faultData,
     loading: faultsLoading,
@@ -145,8 +158,8 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     refetch: refetchFaults,
   } = useFaultDowntime({
     machineId,
-    start: dayStart,
-    end: dayEnd,
+    start: productionStart,
+    end: productionEnd,
     enabled: viewMode === 'faults',
   });
 
@@ -205,35 +218,6 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     })
   );
 
-  // Build dims[0] from shift schedule: format is "TagId;ShiftId"
-  const { dims0, productionStart, productionEnd } = useMemo(() => {
-    const activeShift = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
-
-    if (!activeShift || !activeShift.Items || activeShift.Items.length === 0) {
-      console.log('⚠️ No shift schedule available, using calendar day fallback');
-      // Fallback to calendar day if no shift schedule available
-      return {
-        dims0: undefined,
-        productionStart: dayStart,
-        productionEnd: dayEnd,
-      };
-    }
-
-    const shift = activeShift.Items[0];
-    // Build dims as "TagId;ShiftId" format
-    const dimsValue = `${shift.TagId};${shift.Id}`;
-
-    console.log(
-      `📊 Production history params: dims=[${dimsValue}], start=${shift.StartDateTime}, end=${shift.EndDateTime}`
-    );
-
-    return {
-      dims0: dimsValue,
-      productionStart: shift.StartDateTime,
-      productionEnd: shift.EndDateTime,
-    };
-  }, [currentShiftSchedule, lastShiftSchedule, shiftView, dayStart, dayEnd]);
-
   // Fetch production history using shift-based dims and date boundaries
   const {
     data: productionData,
@@ -249,16 +233,24 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     intervalBase: 'hour',
     dateType: 'calendar',
     filter: 'PlannedProductionTime:true',
-    dims: dims0 ? [dims0] : undefined,
+    // Don't pass dims - let API return all data for time range, we'll filter client-side
+    dims: undefined,
   });
 
-  // Refetch production data when shift view changes
+  // Log production data fetch results
   React.useEffect(() => {
-    if (dims0) {
-      console.log('🔄 Shift view changed, refetching production data');
-      refetch();
-    }
-  }, [shiftView, dims0]);
+    console.log('📈 Production data state:', {
+      loading,
+      hasError: !!error,
+      errorMessage: error?.message,
+      hasData: !!productionData,
+      dataLength: productionData?.length || 0,
+      shiftView,
+      dims0,
+      start: productionStart,
+      end: productionEnd,
+    });
+  }, [productionData, loading, error, shiftView, dims0, productionStart, productionEnd]);
 
   // Machine name hook - use API data or fallback to route param
   const { machineName: apiMachineName } = useMachineName({
@@ -280,9 +272,22 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
   // Transform API data to chart format
   const chartData = useMemo(() => {
+    console.log('📊 Chart data transformation:', {
+      hasData: !!productionData,
+      dataLength: productionData?.length || 0,
+      shiftView,
+      productionStart,
+      productionEnd,
+      dims0,
+    });
+
     if (!productionData || productionData.length === 0) {
+      console.log('⚠️ No production data to display');
       return [];
     }
+
+    console.log('📊 First data point:', productionData[0]);
+    console.log('📊 Last data point:', productionData[productionData.length - 1]);
 
     return productionData.map((point) => {
       const date = new Date(point.timestamp);
@@ -439,6 +444,54 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
       {/* Shift Tabs */}
       <ShiftTabs active={shiftView} onChange={setShiftView} />
+
+      {/* Shift Time Display */}
+      {(() => {
+        const activeSchedule = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
+        const shift = activeSchedule?.Items?.[0];
+
+        console.log(
+          '🔍 Dashboard shift display - shiftView:',
+          shiftView,
+          'has schedule:',
+          !!activeSchedule,
+          'has items:',
+          !!shift
+        );
+
+        if (shift) {
+          const startDate = new Date(shift.StartDateTime);
+          const endDate = new Date(shift.EndDateTime);
+          const formatDateTime = (date: Date) => {
+            return date.toLocaleString('en-US', {
+              month: 'numeric',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            });
+          };
+
+          console.log(
+            '✅ Dashboard rendering shift times:',
+            shift.StartDateTime,
+            '→',
+            shift.EndDateTime
+          );
+
+          return (
+            <View style={styles.shiftTimeDisplay}>
+              <Text style={styles.shiftTimeText}>
+                {formatDateTime(startDate)} → {formatDateTime(endDate)}
+              </Text>
+            </View>
+          );
+        } else {
+          console.log('⚠️ Dashboard no shift schedule to display');
+          return null;
+        }
+      })()}
+
       {/* Mode toggle indicator */}
       <View style={styles.modeToggleRow}>
         <Text style={[styles.modeToggleLabel, viewMode === 'production' && styles.modeActive]}>
@@ -921,6 +974,19 @@ const styles = StyleSheet.create({
   modeToggleSeparator: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  shiftTimeDisplay: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  shiftTimeText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
   },
   modeHint: {
     fontSize: 11,

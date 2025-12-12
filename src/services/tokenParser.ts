@@ -140,6 +140,30 @@ export function getCustomerById(token: string, customerId: number): CustomerAcco
 }
 
 /**
+ * Get the username from the JWT token
+ * @param token - The JWT token string
+ * @returns Username string or null if not found
+ */
+export function getUsernameFromToken(token: string): string | null {
+  const decoded = decodeJwtToken(token);
+
+  if (!decoded) {
+    return null;
+  }
+
+  // Try common JWT username claims in order of preference
+  return (
+    decoded.unique_name ||
+    decoded.preferred_username ||
+    decoded.username ||
+    decoded.name ||
+    decoded.email ||
+    decoded.sub ||
+    null
+  );
+}
+
+/**
  * Check if token has expired
  * @param token - The JWT token string
  * @returns True if expired

@@ -21,13 +21,19 @@ import { DEV_FLAGS } from '../config/devFlags';
 import { authService } from '../services/authService';
 import { useMachineInventory } from '../hooks/useMachineInventory';
 import { getMachineInventory, MachineInventoryItem } from '../services/machineInventoryService';
-import { getMachinePerformance } from '../services/machinePerformanceService';
 import { MiniProductionBar } from '../components/MiniProductionBar';
 import { productionService } from '../services/productionService';
+import {
+  getProductionGoals,
+  getShiftStartFromGoal,
+  ProductionGoalResponse,
+} from '../services/productionGoalService';
 import { MachineStatus } from '../types/api';
 import { CustomerAccount } from '../types/auth';
 import { getSelectedCustomer, saveSelectedCustomer } from '../services/customerStorage';
 import { Plant, getPlants } from '../services/plantService';
+import { getShiftSchedule } from '../services/shiftScheduleService';
+import { ShiftScheduleResponse } from '../types/api';
 
 export type MachineListProps = NativeStackScreenProps<RootStackParamList, 'MachineList'>;
 
@@ -44,6 +50,10 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [showPlantDropdown, setShowPlantDropdown] = useState(false);
+  const [currentShiftSchedule, setCurrentShiftSchedule] = useState<ShiftScheduleResponse | null>(
+    null
+  );
+  const [lastShiftSchedule, setLastShiftSchedule] = useState<ShiftScheduleResponse | null>(null);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const { machines, loading, error, refetch } = useMachineInventory(selectedCustomer, shiftView);
@@ -55,6 +65,9 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
   const [lineChildren, setLineChildren] = useState<Record<number, MachineInventoryItem[]>>({});
   const [lineLoadingId, setLineLoadingId] = useState<number | null>(null);
   const [lineError, setLineError] = useState<Record<number, string | null>>({});
+  const [productionGoals, setProductionGoals] = useState<Map<number, ProductionGoalResponse>>(
+    new Map()
+  );
 
   // Load selected customer and available customers on mount
   useEffect(() => {
@@ -165,18 +178,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     setSelectedCompany(company);
     setShowCompanyDropdown(false);
     setSelectedPlant(null);
-    setPlants([]); // Clear plants list while loading
     setShiftView('current'); // Reset to Current Shift when changing company
-
-    // Create a temporary customer account with just the company name to clear machines
-    // This keeps the UI visible but clears the machine list
-    const tempCustomer: CustomerAccount = {
-      Id: 0, // Invalid ID won't fetch machines
-      Name: company,
-      DisplayName: '',
-      ParentId: 0,
-    };
-    setSelectedCustomer(tempCustomer);
 
     // Find a customer account that matches this company name to get the client ID
     const companyAccount = availableCustomers.find((c) => c.Name === company);
@@ -185,6 +187,17 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     try {
       const plantList = await getPlants(clientId);
       setPlants(plantList);
+
+      // Create a temporary customer account with just the company name
+      // Use a placeholder DisplayName to keep the plant dropdown visible
+      const tempCustomer: CustomerAccount = {
+        Id: 0, // Invalid ID won't fetch machines
+        Name: company,
+        DisplayName: 'Select Plant/Area',
+        ParentId: clientId,
+      };
+      setSelectedCustomer(tempCustomer);
+
       if (plantList.length === 1) {
         const onlyPlant = plantList[0];
         setSelectedPlant(onlyPlant);
@@ -200,6 +213,14 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     } catch (err) {
       console.error('Failed to load plants:', err);
       setPlants([]);
+      // Still set a temp customer to keep UI consistent
+      const tempCustomer: CustomerAccount = {
+        Id: 0,
+        Name: company,
+        DisplayName: 'No Plants Available',
+        ParentId: clientId,
+      };
+      setSelectedCustomer(tempCustomer);
     }
   };
 
@@ -248,11 +269,71 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     }
   };
 
+  const fetchProductionGoals = async (targetMachines?: MachineInventoryItem[]) => {
+    // Check feature flag - skip if disabled
+    if (!DEV_FLAGS.USE_PRODUCTION_GOAL_API) {
+      console.log('🚧 Production goal API disabled via feature flag');
+      return;
+    }
+
+    const source = targetMachines || machines;
+    if (source.length === 0) return;
+    try {
+      const machineIds = source.map((m) => m.MachineId);
+      const dateType = shiftView === 'current' ? 'CurrentShift' : 'LastShift';
+
+      // Batch process in chunks of 5 to avoid timeouts
+      const BATCH_SIZE = 5;
+      const batches = [];
+      for (let i = 0; i < machineIds.length; i += BATCH_SIZE) {
+        batches.push(machineIds.slice(i, i + BATCH_SIZE));
+      }
+
+      console.log(`📊 Fetching production goals in ${batches.length} batches`);
+
+      for (const batch of batches) {
+        const goals = await getProductionGoals({ machineIds: batch, dateType });
+        if (goals.length > 0) {
+          setProductionGoals((prev) => {
+            const next = new Map(prev);
+            goals.forEach((goal) => next.set(goal.Id, goal));
+            return next;
+          });
+        }
+      }
+
+      console.log(`✅ Production goals loaded for ${machineIds.length} machines`);
+    } catch (err: any) {
+      console.error('❌ Production goals fetch failed:', err?.message || err);
+    }
+  };
+
   useEffect(() => {
     if (machines.length > 0) {
       fetchMachineStatuses();
+      fetchProductionGoals();
+      // Fetch shift schedules for the first machine to get shift times
+      fetchShiftSchedules(machines[0].MachineId);
     }
-  }, [machines]);
+  }, [machines, shiftView]);
+
+  const fetchShiftSchedules = async (machineId: number) => {
+    try {
+      console.log(`📅 Fetching shift schedules for machine ${machineId}`);
+      const [current, previous] = await Promise.all([
+        getShiftSchedule(machineId, 'current'),
+        getShiftSchedule(machineId, 'previous'),
+      ]);
+      console.log(`📅 Shift schedules received:`, {
+        current: current?.Items?.[0],
+        previous: previous?.Items?.[0],
+      });
+      setCurrentShiftSchedule(current);
+      setLastShiftSchedule(previous);
+    } catch (error) {
+      console.error('❌ Failed to fetch shift schedules:', error);
+    }
+  };
 
   // Reset expanded state when plant or shift changes
   useEffect(() => {
@@ -262,45 +343,9 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     setLineError({});
   }, [selectedCustomer?.Id, shiftView]);
 
-  // Header performance info (split client & plant/machine)
-  const [clientName, setClientName] = useState<string>('Loading…');
-  const [plantName, setPlantName] = useState<string>('');
-  const HEADER_MACHINE_ID = 468;
-
-  useEffect(() => {
-    const fetchHeaderInfo = async () => {
-      try {
-        // Use shift-aware dateType; API calculates actual shift boundaries
-        const dateType = shiftView === 'current' ? 'CurrentShift' : 'LastShift';
-        const now = new Date();
-        // Placeholder dates - API uses actual shift boundaries based on dateType
-        const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 0);
-
-        console.log(
-          `📊 Fetching header performance for machine ${HEADER_MACHINE_ID}, dateType: ${dateType}`
-        );
-
-        const perf = await getMachinePerformance({
-          machineId: HEADER_MACHINE_ID,
-          start: startDate.toISOString(),
-          end: endDate.toISOString(),
-          filter: 'PlannedProductionTime:true',
-          dateType: dateType,
-          intervalBase: 'hour',
-          timeBase: 'hour',
-        });
-        setClientName(perf.ClientName || 'Client');
-        setPlantName(perf.ParentMachineName || perf.DisplayName || perf.MachineName || 'Machine');
-      } catch (e) {
-        console.warn('⚠️ Header performance fetch failed (non-critical):', e);
-        // Don't break the screen if header fetch fails - set defaults
-        setClientName('Machine List');
-        setPlantName('');
-      }
-    };
-    fetchHeaderInfo();
-  }, [shiftView]);
+  // Header display names - use customer data directly instead of separate API call
+  const clientName = selectedCustomer?.Name || 'Machine List';
+  const plantName = selectedCustomer?.DisplayName || '';
 
   // Removed continuous auto-refresh per updated UX request.
 
@@ -387,41 +432,58 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     const isLine = item?.MachineType?.Name === 'DiscreteLine';
     const isExpanded = expandedLines.has(item.MachineId);
 
-    console.log('📊 Machine item data:', {
-      name: displayName,
-      TotalParts: item.TotalParts,
-      PartsDailyGoal: item.PartsDailyGoal,
-      PartsHourlyGoal: item.PartsHourlyGoal,
-      ShiftStart: item.ShiftStart,
-      DownTime: item.DownTime,
-      RejectParts: item.RejectParts,
-    });
+    // Calculate adjusted goal using production goal data
+    // For current shift: use hourly goal * hours elapsed from actual shift start
+    // For last shift: use full daily goal
+    let adjustedGoal = item.PartsDailyGoal || 0;
 
-    // Calculate adjusted goal based on hours completed in shift (only for current shift)
-    let adjustedGoal = item.PartsDailyGoal;
-    if (shiftView === 'current' && item.PartsHourlyGoal && item.ShiftStart) {
-      try {
-        const shiftStartTime = new Date(item.ShiftStart);
+    if (shiftView === 'current') {
+      const goalData = productionGoals.get(item.MachineId);
+
+      // Try production goal API data first
+      if (goalData && goalData.PartsAvgHourlyGoal) {
+        const shiftStart = getShiftStartFromGoal(goalData);
+        if (shiftStart) {
+          try {
+            const now = new Date();
+            const hoursElapsed = (now.getTime() - shiftStart.getTime()) / (1000 * 60 * 60);
+
+            if (hoursElapsed > 0) {
+              adjustedGoal = goalData.PartsAvgHourlyGoal * hoursElapsed;
+              console.log(
+                `⏱️ ${displayName}: Shift started at ${shiftStart.toLocaleTimeString()}, ${hoursElapsed.toFixed(2)}h elapsed, hourly goal: ${goalData.PartsAvgHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
+              );
+            }
+          } catch (e) {
+            console.error('Failed to calculate adjusted goal:', e);
+          }
+        }
+      }
+      // Fallback: use machine inventory hourly goal if available
+      else if (item.PartsHourlyGoal && item.PartsHourlyGoal > 0) {
+        // Use current time and assume shift started at beginning of today
+        // This is less accurate but better than showing full daily goal
         const now = new Date();
-        const hoursElapsed = (now.getTime() - shiftStartTime.getTime()) / (1000 * 60 * 60);
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const hoursElapsed = (now.getTime() - todayStart.getTime()) / (1000 * 60 * 60);
 
         if (hoursElapsed > 0) {
           adjustedGoal = item.PartsHourlyGoal * hoursElapsed;
           console.log(
-            `⏱️ ${displayName}: ${hoursElapsed.toFixed(2)}h elapsed, hourly goal: ${item.PartsHourlyGoal}/hr, adjusted daily goal: ${Math.round(adjustedGoal)}`
+            `⏱️ ${displayName} (fallback): ${hoursElapsed.toFixed(2)}h elapsed since midnight, hourly goal: ${item.PartsHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
           );
         }
-      } catch (e) {
-        console.error('Failed to calculate adjusted goal:', e);
       }
     }
 
+    // Display goal text - matches exactly what progress bar uses
     const prodGoal =
-      item.TotalParts !== undefined
-        ? adjustedGoal
-          ? `${item.TotalParts}/${Math.round(adjustedGoal)}`
-          : `${item.TotalParts}`
-        : '-';
+      item.TotalParts !== undefined && adjustedGoal > 0
+        ? `${item.TotalParts}/${Math.round(adjustedGoal)}`
+        : item.TotalParts !== undefined
+          ? `${item.TotalParts}`
+          : '-';
     const downtime = formatDowntime(item.DownTime);
     const scrap = item.RejectParts || 0;
 
@@ -449,6 +511,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         setLineChildren((prev) => ({ ...prev, [item.MachineId]: childMachines }));
         setExpandedLines((prev) => new Set(prev).add(item.MachineId));
         await fetchMachineStatuses(childMachines);
+        await fetchProductionGoals(childMachines);
       } catch (err: any) {
         console.error('❌ Failed to load machines for line:', err);
         setLineError((prev) => ({
@@ -546,28 +609,51 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
                 const childStatusColor = getStatusColor(child);
                 const childBg = getRowBackgroundColor(child);
 
-                // Child metrics mirror main rows
-                let childAdjustedGoal = child.PartsDailyGoal;
-                if (shiftView === 'current' && child.PartsHourlyGoal && child.ShiftStart) {
-                  try {
-                    const shiftStartTime = new Date(child.ShiftStart);
+                // Child metrics - same calculation as parent machines
+                // For current shift: use hourly goal * hours elapsed from actual shift start
+                // For last shift: use full daily goal
+                let childAdjustedGoal = child.PartsDailyGoal || 0;
+
+                if (shiftView === 'current') {
+                  const childGoalData = productionGoals.get(child.MachineId);
+
+                  // Try production goal API data first
+                  if (childGoalData && childGoalData.PartsAvgHourlyGoal) {
+                    const childShiftStart = getShiftStartFromGoal(childGoalData);
+                    if (childShiftStart) {
+                      try {
+                        const now = new Date();
+                        const hoursElapsed =
+                          (now.getTime() - childShiftStart.getTime()) / (1000 * 60 * 60);
+
+                        if (hoursElapsed > 0) {
+                          childAdjustedGoal = childGoalData.PartsAvgHourlyGoal * hoursElapsed;
+                        }
+                      } catch (e) {
+                        console.error('Failed to calc child adjusted goal:', e);
+                      }
+                    }
+                  }
+                  // Fallback: use machine inventory hourly goal if available
+                  else if (child.PartsHourlyGoal && child.PartsHourlyGoal > 0) {
                     const now = new Date();
-                    const hoursElapsed =
-                      (now.getTime() - shiftStartTime.getTime()) / (1000 * 60 * 60);
+                    const todayStart = new Date(now);
+                    todayStart.setHours(0, 0, 0, 0);
+                    const hoursElapsed = (now.getTime() - todayStart.getTime()) / (1000 * 60 * 60);
+
                     if (hoursElapsed > 0) {
                       childAdjustedGoal = child.PartsHourlyGoal * hoursElapsed;
                     }
-                  } catch (e) {
-                    console.error('Failed to calc child adjusted goal:', e);
                   }
                 }
 
+                // Display goal text - matches exactly what progress bar uses
                 const childProdGoal =
-                  child.TotalParts !== undefined
-                    ? childAdjustedGoal
-                      ? `${child.TotalParts}/${Math.round(childAdjustedGoal)}`
-                      : `${child.TotalParts}`
-                    : '-';
+                  child.TotalParts !== undefined && childAdjustedGoal > 0
+                    ? `${child.TotalParts}/${Math.round(childAdjustedGoal)}`
+                    : child.TotalParts !== undefined
+                      ? `${child.TotalParts}`
+                      : '-';
                 const childDowntime = formatDowntime(child.DownTime);
                 const childScrap = child.RejectParts || 0;
 
@@ -837,6 +923,41 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+        {/* Shift Time Display */}
+        {(() => {
+          const activeSchedule = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
+          console.log(
+            `🔍 Shift display - shiftView: ${shiftView}, has schedule: ${!!activeSchedule}, has items: ${!!activeSchedule?.Items?.[0]}`
+          );
+
+          if (activeSchedule?.Items?.[0]) {
+            const shift = activeSchedule.Items[0];
+            console.log(`✅ Rendering shift times: ${shift.StartDateTime} → ${shift.EndDateTime}`);
+            const startTime = new Date(shift.StartDateTime).toLocaleString('en-US', {
+              month: 'numeric',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            });
+            const endTime = new Date(shift.EndDateTime).toLocaleString('en-US', {
+              month: 'numeric',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            });
+            return (
+              <View style={styles.shiftTimeDisplay}>
+                <Text style={styles.shiftTimeText}>
+                  {shiftView === 'current' ? 'Current' : 'Last'} Shift: {startTime} → {endTime}
+                </Text>
+              </View>
+            );
+          }
+          console.log('⚠️ No shift schedule to display');
+          return null;
+        })()}
         <View style={styles.legendContainer}>
           <View style={styles.legend}>
             <View style={styles.legendItem}>
@@ -1137,6 +1258,22 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#FFFFFF',
+  },
+  shiftTimeDisplay: {
+    marginHorizontal: 16,
+    marginTop: -8,
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  shiftTimeText: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   legendContainer: {
     alignItems: 'center',

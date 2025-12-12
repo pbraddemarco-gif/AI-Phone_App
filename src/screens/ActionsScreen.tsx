@@ -27,6 +27,8 @@ import {
   ActionCategory,
 } from '../services/actionTemplateService';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { getToken } from '../services/tokenStorage';
+import { getUsernameFromToken } from '../services/tokenParser';
 
 export type ActionsScreenProps = NativeStackScreenProps<RootStackParamList, 'Actions'>;
 
@@ -62,6 +64,22 @@ function isRelatedMachinesField(field: ActionTemplateField) {
   return display.includes('related to machines');
 }
 
+function isCreatedByField(field: ActionTemplateField) {
+  const display = (field.DisplayName || '').toLowerCase();
+  const fieldName = (field.FieldName || '').toLowerCase();
+  return display.includes('created by') || fieldName.includes('createdby');
+}
+
+function isDateCreatedField(field: ActionTemplateField) {
+  const display = (field.DisplayName || '').toLowerCase();
+  const fieldName = (field.FieldName || '').toLowerCase();
+  return (
+    display.includes('date created') ||
+    fieldName.includes('datecreated') ||
+    (display.includes('created') && display.includes('date'))
+  );
+}
+
 export default function ActionsScreen({ navigation, route }: ActionsScreenProps) {
   const theme = useAppTheme();
   const routeParams = route.params || {};
@@ -92,7 +110,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
 
   useEffect(() => {
     if (routeParams.selectedMachines !== undefined) {
-      console.log('Actions: received selectedMachines', routeParams.selectedMachines);
       setLinkedMachines(routeParams.selectedMachines);
     }
     if (
@@ -112,10 +129,8 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
 
   useFocusEffect(
     React.useCallback(() => {
-      console.log('Actions focus: route params', route.params);
       const incoming = route.params?.selectedMachines;
       if (incoming !== undefined) {
-        console.log('Actions focus: pulling selectedMachines', incoming);
         setLinkedMachines(incoming);
       }
     }, [route.params])
@@ -148,8 +163,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
     const relatedField = selectedTemplate.fields.find(isRelatedMachinesField);
     if (!relatedField) return;
 
-    console.log('Actions: syncing linkedMachines to form', linkedMachines);
-
     const serialized = JSON.stringify(
       linkedMachines.map((m) => ({
         id: m.machineId,
@@ -165,6 +178,34 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
       return { ...prev, [relatedField.FieldName]: serialized };
     });
   }, [selectedTemplate, linkedMachines]);
+
+  // Auto-populate Created by field with username from token
+  useEffect(() => {
+    if (!selectedTemplate) return;
+
+    const createdByField = selectedTemplate.fields.find(isCreatedByField);
+    if (!createdByField) return;
+
+    const populateUsername = async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+
+        const username = getUsernameFromToken(token);
+        if (username) {
+          setFormState((prev) => {
+            // Only set if not already set by user
+            if (prev[createdByField.FieldName]) return prev;
+            return { ...prev, [createdByField.FieldName]: username };
+          });
+        }
+      } catch (e) {
+        console.error('Failed to get username from token', e);
+      }
+    };
+
+    populateUsername();
+  }, [selectedTemplate]);
 
   const visibleFields = useMemo(() => {
     if (!selectedTemplate) return [] as ActionTemplateField[];
@@ -187,6 +228,13 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
         }
         if (isUploadField(f)) {
           defaults[f.FieldName] = [];
+        } else if (isCreatedByField(f)) {
+          // Auto-populate Created by field with username (will be set after token retrieval)
+          defaults[f.FieldName] = '';
+        } else if (isDateCreatedField(f)) {
+          // Auto-populate Date Created field with current date/time
+          const now = new Date();
+          defaults[f.FieldName] = now.toLocaleString();
         } else {
           const def = (f.Default || '').toString();
           const lower = def.toLowerCase();
@@ -451,13 +499,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
         }
       }
 
-      Alert.alert('Action saved', 'Form values and attachments logged to console.');
-      console.log('Action submission', {
-        templateId: selectedTemplate.Id,
-        templateName: selectedTemplate.Name,
-        values: formStateToSubmit,
-        linkedMachines,
-      });
+      Alert.alert('Action saved', 'Form values saved successfully.');
     } catch (e: any) {
       console.error('Submission failed', e);
       setSubmitError(e?.message || 'Failed to submit action');
@@ -519,11 +561,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
           <ScrollView contentContainerStyle={styles.formContainer}>
             <Text style={styles.sectionTitle}>Details</Text>
             <View style={styles.card}>
-              {process.env.NODE_ENV !== 'production' ? (
-                <Text style={styles.muted}>
-                  Debug linkedMachines: {JSON.stringify(linkedMachines)}
-                </Text>
-              ) : null}
               {detailLoading ? (
                 <View style={styles.center}>
                   <ActivityIndicator size="small" color="#007AFF" />
@@ -549,10 +586,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
                                   plantName: contextParams.plantName,
                                   initialSelected: linkedMachines,
                                   onSelectMachines: (selections: ActionMachineSelection[]) => {
-                                    console.log(
-                                      'Actions: callback received selections',
-                                      selections
-                                    );
                                     setLinkedMachines(selections);
                                   },
                                 })

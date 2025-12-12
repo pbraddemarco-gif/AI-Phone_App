@@ -3,7 +3,7 @@
  * API client for fetching machine performance data including machine name
  */
 
-import { authApiClient } from './apiClient';
+import { apiClient } from './apiClient';
 
 export interface MachinePerformanceParams {
   machineId: number;
@@ -61,7 +61,7 @@ export async function getMachinePerformance(
     queryParams.append(`dims[${idx}]`, dim);
   });
 
-  const response = await authApiClient.get<MachinePerformanceResponse>(
+  const response = await apiClient.get<MachinePerformanceResponse>(
     `/machines/${machineId}/performance?${queryParams.toString()}`
   );
 

@@ -130,11 +130,6 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
   };
 
   const toggleSelect = (machine: MachineInventoryItem) => {
-    console.log('Toggling selection', {
-      id: machine.MachineId,
-      name: machine.DisplayName || machine.MachineName,
-      isLine: machine.MachineType?.Name === 'DiscreteLine',
-    });
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(machine.MachineId)) next.delete(machine.MachineId);
@@ -156,21 +151,8 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
       }
     });
 
-    console.log('Add Selected tapped', {
-      plantId,
-      plantName,
-      initialSelected,
-      selectedIds: Array.from(selected),
-      selectionCount: selections.length,
-      selections,
-      canGoBack: navigation.canGoBack(),
-      hasCallback: !!onSelectMachines,
-    });
-
     if (onSelectMachines) {
       onSelectMachines(selections);
-    } else {
-      console.warn('No callback provided; selections will not propagate.');
     }
 
     navigation.goBack();

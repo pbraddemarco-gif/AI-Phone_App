@@ -91,6 +91,8 @@ export async function getMachineInventory(
         GoodParts: item.GoodParts,
         RejectParts: item.RejectParts,
         PartsDailyGoal: item.PartsDailyGoal,
+        PartsHourlyGoal: item.PartsHourlyGoal,
+        ShiftStart: item.ShiftStart,
         DownTime: item.DownTime,
         ParentMachineId: item.ParentMachineId,
         ParentMachineName: item.ParentMachineName,
