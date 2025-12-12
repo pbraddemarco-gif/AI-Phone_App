@@ -923,41 +923,6 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
-        {/* Shift Time Display */}
-        {(() => {
-          const activeSchedule = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
-          console.log(
-            `🔍 Shift display - shiftView: ${shiftView}, has schedule: ${!!activeSchedule}, has items: ${!!activeSchedule?.Items?.[0]}`
-          );
-
-          if (activeSchedule?.Items?.[0]) {
-            const shift = activeSchedule.Items[0];
-            console.log(`✅ Rendering shift times: ${shift.StartDateTime} → ${shift.EndDateTime}`);
-            const startTime = new Date(shift.StartDateTime).toLocaleString('en-US', {
-              month: 'numeric',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true,
-            });
-            const endTime = new Date(shift.EndDateTime).toLocaleString('en-US', {
-              month: 'numeric',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true,
-            });
-            return (
-              <View style={styles.shiftTimeDisplay}>
-                <Text style={styles.shiftTimeText}>
-                  {shiftView === 'current' ? 'Current' : 'Last'} Shift: {startTime} → {endTime}
-                </Text>
-              </View>
-            );
-          }
-          console.log('⚠️ No shift schedule to display');
-          return null;
-        })()}
         <View style={styles.legendContainer}>
           <View style={styles.legend}>
             <View style={styles.legendItem}>

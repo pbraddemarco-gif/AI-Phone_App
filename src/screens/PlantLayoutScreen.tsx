@@ -164,12 +164,17 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
       const endDate = new Date();
       endDate.setHours(23, 59, 59, 999);
 
+      console.log('🗺️ Fetching plant layout for machine:', machineId);
+
       const perf = await getMachinePerformance({
         machineId,
         start: startDate.toISOString(),
         end: endDate.toISOString(),
         filter: 'PlannedProductionTime:true',
+        dims: [], // Don't pass dims for plant layout - we just need the image
       });
+
+      console.log('✅ Plant layout response received');
 
       if (perf.ImageMap) {
         setImageUrl(perf.ImageMap);
@@ -278,9 +283,17 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
       } else {
         setError('No plant layout image available');
       }
-    } catch (err) {
-      console.error('Failed to fetch plant layout:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load plant layout');
+    } catch (err: any) {
+      console.error('❌ Failed to fetch plant layout:', err);
+
+      // Provide more specific error messages
+      if (err?.code === 'ERR_BAD_RESPONSE' && err?.response?.status === 504) {
+        setError('Server timeout - plant layout is taking too long to load. Please try again.');
+      } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+        setError('Request timeout - please check your connection and try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to load plant layout');
+      }
     } finally {
       setLoading(false);
     }
