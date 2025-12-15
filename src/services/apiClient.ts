@@ -7,29 +7,43 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
+import Constants from 'expo-constants';
 
-// Production/Direct endpoints (bypass proxy)
+// Production/Direct endpoints
 const PROD_AUTH_BASE_URL = 'https://app.automationintellect.com/api';
 const PROD_DATA_BASE_URL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
 
+// Get the dev machine IP from Expo's manifest
+// When using tunnel/LAN, Expo provides the hostUri
+const getDevProxyBase = () => {
+  if (Constants.expoConfig?.hostUri) {
+    // Extract the IP from hostUri (format: "192.168.x.x:8081")
+    const host = Constants.expoConfig.hostUri.split(':')[0];
+    return `http://${host}:3001`;
+  }
+  // Fallback to localhost for web or if hostUri not available
+  return 'http://localhost:3001';
+};
+
+const devProxyBase = getDevProxyBase();
+
 // Local development proxy endpoints
-const DEV_PROXY_AUTH = 'http://localhost:3001/api/auth';
-const DEV_PROXY_DATA = 'http://localhost:3001/api/data';
+const DEV_PROXY_AUTH = `${devProxyBase}/api/auth`;
+const DEV_PROXY_DATA = `${devProxyBase}/api/data`;
 
-// Check if we're in development mode
+// Check environment - if using tunnel mode, bypass proxy and use production directly
 const isDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+const isTunnelMode = Constants.expoConfig?.hostUri?.includes('.exp.direct');
 
-// Override with explicit env vars if provided
-const envAuth = process.env.EXPO_PUBLIC_AUTH_BASE;
-const envData = process.env.EXPO_PUBLIC_API_BASE;
+// When using tunnel, bypass proxy and connect directly to production
+const resolvedAuthBase = isDevelopment && !isTunnelMode ? DEV_PROXY_AUTH : PROD_AUTH_BASE_URL;
+const resolvedDataBase = isDevelopment && !isTunnelMode ? DEV_PROXY_DATA : PROD_DATA_BASE_URL;
 
-// Determine which endpoints to use
-const resolvedAuthBase = envAuth || (isDevelopment ? DEV_PROXY_AUTH : PROD_AUTH_BASE_URL);
-const resolvedDataBase = envData || (isDevelopment ? DEV_PROXY_DATA : PROD_DATA_BASE_URL);
-
-console.log('[apiClient] Environment: development=' + isDevelopment);
-console.log('[apiClient] Using proxy auth:', resolvedAuthBase === DEV_PROXY_AUTH);
-console.log('[apiClient] Using proxy data:', resolvedDataBase === DEV_PROXY_DATA);
+console.log('[apiClient] Environment:', isDevelopment ? 'development' : 'production');
+console.log('[apiClient] Tunnel mode:', isTunnelMode);
+console.log('[apiClient] Dev proxy base:', devProxyBase);
+console.log('[apiClient] Auth:', resolvedAuthBase);
+console.log('[apiClient] Data:', resolvedDataBase);
 
 /**
  * Main API client (data)

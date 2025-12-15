@@ -101,6 +101,15 @@ class AuthService {
       }
 
       const { access_token, refresh_token } = data;
+
+      console.log('🔍 AuthService: Login response received', {
+        hasAccessToken: !!access_token,
+        accessTokenLength: access_token?.length || 0,
+        accessTokenPreview: access_token ? `${access_token.substring(0, 30)}...` : 'null',
+        accessTokenParts: access_token ? access_token.split('.').length : 0,
+        hasRefreshToken: !!refresh_token,
+      });
+
       await saveToken(access_token);
 
       if (refresh_token) {

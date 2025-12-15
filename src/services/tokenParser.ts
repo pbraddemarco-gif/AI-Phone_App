@@ -31,14 +31,16 @@ export interface DecodedToken {
 export function decodeJwtToken(token: string): DecodedToken | null {
   try {
     if (!token || typeof token !== 'string') {
-      console.error('Invalid token: token is not a string');
+      console.warn('⚠️ Token is not a string or empty');
       return null;
     }
 
     // JWT format: header.payload.signature
     const parts = token.split('.');
     if (parts.length !== 3) {
-      console.error(`Invalid JWT format: expected 3 parts, got ${parts.length}`);
+      console.warn(
+        `⚠️ Token is not in JWT format (has ${parts.length} parts instead of 3) - skipping decode`
+      );
       return null;
     }
 

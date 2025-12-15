@@ -49,11 +49,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
-  // TEMPORARY: Dev bypass - skip auth for testing
-  const handleDevBypass = () => {
-    navigation.navigate('ProductionDashboard', {});
-  };
-
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.backgroundDark }]}
@@ -117,13 +112,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <Text style={styles.buttonText}>Sign In</Text>
           )}
         </TouchableOpacity>
-
-        {/* TEMPORARY: Development shortcut - remove before production */}
-        <TouchableOpacity style={styles.devLink} onPress={handleDevBypass}>
-          <Text style={[styles.devLinkText, { color: theme.colors.accent }]}>
-            🔧 Dev: Go to Production (Mock Data)
-          </Text>
-        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -135,6 +123,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
@@ -197,14 +186,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
     textAlign: 'center',
-  },
-  devLink: {
-    marginTop: 24,
-    paddingVertical: 8,
-  },
-  devLinkText: {
-    fontSize: 13,
-    textAlign: 'center',
-    opacity: 0.7,
   },
 });

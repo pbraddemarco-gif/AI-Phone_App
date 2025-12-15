@@ -30,21 +30,37 @@ export const ProductionChart: React.FC<ProductionChartProps> = ({ data, partsHou
     return <View style={styles.wrapper} />;
   }
 
+  // Safely extract numeric values, filtering out NaN/Infinity
+  const safeValues = data
+    .map((d) => Math.max(d.goodparts || 0, d.rejectparts || 0, 1))
+    .filter((v) => isFinite(v));
+  const safeDowntimes = data.map((d) => d.downtimeMinutes || 0).filter((v) => isFinite(v));
+
   const maxProduction = Math.max(
-    ...data.map((d) => Math.max(d.goodparts, d.rejectparts, 1)),
-    partsHourlyGoal
+    ...safeValues,
+    isFinite(partsHourlyGoal) ? partsHourlyGoal : 0,
+    1 // Ensure at least 1
   );
   // Add 15% headroom to ensure goal line is visible and has space above it
   const maxProductionWithHeadroom = maxProduction * 1.15;
-  const maxDowntime = Math.max(...data.map((d) => d.downtimeMinutes), 1);
+  const maxDowntime = Math.max(...safeDowntimes, 1);
 
   const barWidth = (chartWidth / data.length) * 0.5; // 50% of slot width
   const slotWidth = chartWidth / data.length;
 
-  // Helper scale functions
-  const scaleYProduction = (v: number) =>
-    chartHeight - (v / maxProductionWithHeadroom) * chartHeight;
-  const scaleYDowntime = (v: number) => chartHeight - (v / maxDowntime) * chartHeight;
+  // Helper scale functions with safety checks
+  const scaleYProduction = (v: number) => {
+    if (!isFinite(v) || !isFinite(maxProductionWithHeadroom) || maxProductionWithHeadroom === 0) {
+      return chartHeight;
+    }
+    return chartHeight - (v / maxProductionWithHeadroom) * chartHeight;
+  };
+  const scaleYDowntime = (v: number) => {
+    if (!isFinite(v) || !isFinite(maxDowntime) || maxDowntime === 0) {
+      return chartHeight;
+    }
+    return chartHeight - (v / maxDowntime) * chartHeight;
+  };
 
   // Lines points
   const scrapPoints: { x: number; y: number }[] = [];
@@ -52,8 +68,10 @@ export const ProductionChart: React.FC<ProductionChartProps> = ({ data, partsHou
 
   data.forEach((d, i) => {
     const centerX = paddingLeft + slotWidth * i + slotWidth / 2;
-    scrapPoints.push({ x: centerX, y: paddingTop + scaleYProduction(d.rejectparts) });
-    downtimePoints.push({ x: centerX, y: paddingTop + scaleYDowntime(d.downtimeMinutes) });
+    const rejectValue = isFinite(d.rejectparts) ? d.rejectparts : 0;
+    const downtimeValue = isFinite(d.downtimeMinutes) ? d.downtimeMinutes : 0;
+    scrapPoints.push({ x: centerX, y: paddingTop + scaleYProduction(rejectValue) });
+    downtimePoints.push({ x: centerX, y: paddingTop + scaleYDowntime(downtimeValue) });
   });
 
   return (
@@ -100,8 +118,15 @@ export const ProductionChart: React.FC<ProductionChartProps> = ({ data, partsHou
 
         {/* Bars for good parts */}
         {data.map((d, i) => {
+          const goodPartsValue = isFinite(d.goodparts) ? d.goodparts : 0;
           const x = paddingLeft + slotWidth * i + (slotWidth - barWidth) / 2;
-          const barHeight = (d.goodparts / maxProductionWithHeadroom) * chartHeight;
+          const barHeight = (goodPartsValue / maxProductionWithHeadroom) * chartHeight;
+
+          // Skip rendering if invalid
+          if (!isFinite(barHeight) || barHeight < 0) {
+            return null;
+          }
+
           return (
             <Rect
               key={`bar-${i}`}

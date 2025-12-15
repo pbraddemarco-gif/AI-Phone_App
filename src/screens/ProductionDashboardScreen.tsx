@@ -194,28 +194,30 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
   const hasMoreFaults = faultPoints.length > 5;
 
   // Swipe gesture logic (PanResponder for reliable horizontal swipe)
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (
-        _e: GestureResponderEvent,
-        gestureState: PanResponderGestureState
-      ) => {
-        // Activate only if horizontal movement is significant and greater than vertical
-        const { dx, dy } = gestureState;
-        return Math.abs(dx) > 15 && Math.abs(dx) > Math.abs(dy);
-      },
-      onPanResponderRelease: (
-        _e: GestureResponderEvent,
-        gestureState: PanResponderGestureState
-      ) => {
-        const { dx } = gestureState;
-        if (dx > 50 && viewMode === 'production') {
-          setViewMode('faults');
-        } else if (dx < -50 && viewMode === 'faults') {
-          setViewMode('production');
-        }
-      },
-    })
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (
+          _e: GestureResponderEvent,
+          gestureState: PanResponderGestureState
+        ) => {
+          // Activate only if horizontal movement is significant and greater than vertical
+          const { dx, dy } = gestureState;
+          return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5;
+        },
+        onPanResponderRelease: (
+          _e: GestureResponderEvent,
+          gestureState: PanResponderGestureState
+        ) => {
+          const { dx } = gestureState;
+          // Toggle on any significant horizontal swipe
+          if (Math.abs(dx) > 50) {
+            setViewMode((prev) => (prev === 'production' ? 'faults' : 'production'));
+          }
+        },
+      }),
+    []
   );
 
   // Fetch production history using shift-based dims and date boundaries
@@ -290,18 +292,39 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     console.log('📊 Last data point:', productionData[productionData.length - 1]);
 
     return productionData.map((point) => {
-      const date = new Date(point.timestamp);
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      const timeLabel = `${hours}:${minutes}`;
+      try {
+        const date = new Date(point.timestamp);
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid timestamp in chart data:', point.timestamp);
+          return {
+            hour: '00:00',
+            goodparts: point.goodParts || 0,
+            rejectparts: point.rejectParts || 0,
+            downtimeMinutes: point.downtime || 0,
+            goalMinutes: 60,
+          };
+        }
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const timeLabel = `${hours}:${minutes}`;
 
-      return {
-        hour: timeLabel,
-        goodparts: point.goodParts || 0,
-        rejectparts: point.rejectParts || 0,
-        downtimeMinutes: point.downtime || 0,
-        goalMinutes: 60,
-      };
+        return {
+          hour: timeLabel,
+          goodparts: point.goodParts || 0,
+          rejectparts: point.rejectParts || 0,
+          downtimeMinutes: point.downtime || 0,
+          goalMinutes: 60,
+        };
+      } catch (error) {
+        console.error('Error processing chart data point:', error);
+        return {
+          hour: '00:00',
+          goodparts: 0,
+          rejectparts: 0,
+          downtimeMinutes: 0,
+          goalMinutes: 60,
+        };
+      }
     });
   }, [productionData]);
 
@@ -319,35 +342,74 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     }
 
     // Get date from first data point for section header
-    const firstDate = new Date(productionData[0].timestamp);
-    const tableDate = firstDate.toLocaleDateString('en-US', {
-      month: 'numeric',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    let tableDate: string;
+    try {
+      const firstDate = new Date(productionData[0].timestamp);
+      if (isNaN(firstDate.getTime())) {
+        tableDate = 'Invalid Date';
+      } else {
+        tableDate = firstDate.toLocaleDateString('en-US', {
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
+    } catch (error) {
+      console.error('Error formatting table date:', error);
+      tableDate = 'Unknown';
+    }
 
     const rows = productionData.map((point) => {
-      const date = new Date(point.timestamp);
-      const hour = date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
+      try {
+        const date = new Date(point.timestamp);
+        let hour: string;
+        if (isNaN(date.getTime())) {
+          hour = '00:00';
+        } else {
+          hour = date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+        }
 
-      return {
-        hour,
-        timestamp: point.timestamp, // Keep timestamp for sorting
-        production: Math.round(point.goodParts || 0),
-        scrap: Math.round(point.rejectParts || 0),
-        downtime: Math.round(point.downtime || 0),
-      };
+        return {
+          hour,
+          timestamp: point.timestamp, // Keep timestamp for sorting
+          production: Math.round(point.goodParts || 0),
+          scrap: Math.round(point.rejectParts || 0),
+          downtime: Math.round(point.downtime || 0),
+        };
+      } catch (error) {
+        console.error('Error processing table row:', error);
+        return {
+          hour: '00:00',
+          timestamp: point.timestamp,
+          production: 0,
+          scrap: 0,
+          downtime: 0,
+        };
+      }
     });
 
     // Sort rows by timestamp based on hourSortOrder
     const sortedRows = [...rows].sort((a, b) => {
-      const timeA = new Date(a.timestamp).getTime();
-      const timeB = new Date(b.timestamp).getTime();
-      return hourSortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+      try {
+        const dateA = new Date(a.timestamp);
+        const dateB = new Date(b.timestamp);
+        const timeA = dateA.getTime();
+        const timeB = dateB.getTime();
+
+        // Validate dates
+        if (isNaN(timeA) && isNaN(timeB)) return 0;
+        if (isNaN(timeA)) return 1;
+        if (isNaN(timeB)) return -1;
+
+        return hourSortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+      } catch (error) {
+        console.error('Error sorting rows:', error);
+        return 0;
+      }
     });
 
     return { hourlyRows: sortedRows, tableDate };
@@ -459,33 +521,45 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
           !!shift
         );
 
-        if (shift) {
-          const startDate = new Date(shift.StartDateTime);
-          const endDate = new Date(shift.EndDateTime);
-          const formatDateTime = (date: Date) => {
-            return date.toLocaleString('en-US', {
-              month: 'numeric',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true,
-            });
-          };
+        if (shift?.StartDateTime && shift?.EndDateTime) {
+          try {
+            const startDate = new Date(shift.StartDateTime);
+            const endDate = new Date(shift.EndDateTime);
 
-          console.log(
-            '✅ Dashboard rendering shift times:',
-            shift.StartDateTime,
-            '→',
-            shift.EndDateTime
-          );
+            // Check if dates are valid
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+              console.warn('⚠️ Invalid shift dates:', shift.StartDateTime, shift.EndDateTime);
+              return null;
+            }
 
-          return (
-            <View style={styles.shiftTimeDisplay}>
-              <Text style={styles.shiftTimeText}>
-                {formatDateTime(startDate)} → {formatDateTime(endDate)}
-              </Text>
-            </View>
-          );
+            const formatDateTime = (date: Date) => {
+              return date.toLocaleString('en-US', {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+              });
+            };
+
+            console.log(
+              '✅ Dashboard rendering shift times:',
+              shift.StartDateTime,
+              '→',
+              shift.EndDateTime
+            );
+
+            return (
+              <View style={styles.shiftTimeDisplay}>
+                <Text style={styles.shiftTimeText}>
+                  {formatDateTime(startDate)} → {formatDateTime(endDate)}
+                </Text>
+              </View>
+            );
+          } catch (error) {
+            console.error('❌ Error rendering shift times:', error);
+            return null;
+          }
         } else {
           console.log('⚠️ Dashboard no shift schedule to display');
           return null;
@@ -542,7 +616,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
       </View>
 
       {/* Chart - Fixed position */}
-      <View style={styles.chartContainer} {...panResponder.current.panHandlers}>
+      <View style={styles.chartContainer} {...panResponder.panHandlers}>
         {(loading && viewMode === 'production') || (faultsLoading && viewMode === 'faults') ? (
           <View
             style={{

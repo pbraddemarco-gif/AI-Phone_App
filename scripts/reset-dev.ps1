@@ -68,6 +68,8 @@ try {
     $env:EXPO_PUBLIC_AUTH_BASE = 'http://localhost:3001/api/auth'
     Write-Section "Env set: API_BASE=$($env:EXPO_PUBLIC_API_BASE) AUTH_BASE=$($env:EXPO_PUBLIC_AUTH_BASE)"
 
+    $env:EXPO_NO_INTERACTIVE = '1'
+
     $expoArgs = @('start')
     if ($Web) { $expoArgs += '--web' }
     if ($Clear) { $expoArgs += '--clear' }

@@ -189,18 +189,24 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
     const populateUsername = async () => {
       try {
         const token = await getToken();
-        if (!token) return;
+        if (!token) {
+          console.log('ℹ️ ActionsScreen: No token available for username extraction');
+          return;
+        }
 
         const username = getUsernameFromToken(token);
         if (username) {
+          console.log('✅ ActionsScreen: Extracted username:', username);
           setFormState((prev) => {
             // Only set if not already set by user
             if (prev[createdByField.FieldName]) return prev;
             return { ...prev, [createdByField.FieldName]: username };
           });
+        } else {
+          console.log('ℹ️ ActionsScreen: Could not extract username from token (non-JWT format)');
         }
       } catch (e) {
-        console.error('Failed to get username from token', e);
+        console.warn('⚠️ ActionsScreen: Failed to get username from token', e);
       }
     };
 
@@ -355,7 +361,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.6,
       });
       if (result.canceled) return;
@@ -393,7 +398,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.6,
       });
       if (result.canceled) return;
