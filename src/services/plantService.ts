@@ -29,12 +29,14 @@ interface PlantListResponse {
  */
 export async function getPlants(clientId: number): Promise<Plant[]> {
   try {
-    console.log('🏭 Fetching plants for client ID:', clientId);
-    console.log('🏭 API Base URL:', authApiClient.defaults.baseURL);
-    console.log(
-      '🏭 Full URL:',
-      `${authApiClient.defaults.baseURL}/clients/${clientId}/machines?mode=plant`
-    );
+    if (__DEV__) {
+      console.debug('🏭 Fetching plants for client ID:', clientId);
+      console.debug('🏭 API Base URL:', authApiClient.defaults.baseURL);
+      console.debug(
+        '🏭 Full URL:',
+        `${authApiClient.defaults.baseURL}/clients/${clientId}/machines?mode=plant`
+      );
+    }
 
     const response = await authApiClient.get<PlantListResponse>(`/clients/${clientId}/machines`, {
       params: {
@@ -43,23 +45,29 @@ export async function getPlants(clientId: number): Promise<Plant[]> {
       timeout: 10000,
     });
 
-    console.log('🏭 Raw response:', JSON.stringify(response.data, null, 2));
+    if (__DEV__) {
+      console.debug('🏭 Raw response:', JSON.stringify(response.data, null, 2));
+    }
     const plants = response.data.Items || [];
-    console.log(`✅ Loaded ${plants.length} plants for client ${clientId}`);
-    plants.forEach((p: Plant) =>
-      console.log(
-        `  - [${p.Id}] ${p.DisplayName} (${p.ChildMachinesCount} machines) - ClientId: ${p.ClientId}, MachineType.Name: ${p.MachineType.Name}`
-      )
-    );
+    if (__DEV__) {
+      console.debug(`✅ Loaded ${plants.length} plants for client ${clientId}`);
+      plants.forEach((p: Plant) =>
+        console.debug(
+          `  - [${p.Id}] ${p.DisplayName} (${p.ChildMachinesCount} machines) - ClientId: ${p.ClientId}, MachineType.Name: ${p.MachineType.Name}`
+        )
+      );
+    }
 
     // Filter to only show items where MachineType.Name === "Plant"
     const filteredPlants = plants.filter((p) => p.MachineType.Name === 'Plant');
-    console.log(`📋 Filtered to ${filteredPlants.length} plants (MachineType.Name === "Plant")`);
+    if (__DEV__) {
+      console.debug(`📋 Filtered to ${filteredPlants.length} plants (MachineType.Name === "Plant")`);
+    }
 
     return filteredPlants;
   } catch (error: any) {
-    console.error('❌ Failed to fetch plants:', error);
-    console.error('❌ Error details:', {
+    if (__DEV__) console.debug('❌ Failed to fetch plants:', error);
+    if (__DEV__) console.debug('❌ Error details:', {
       message: error?.message,
       response: error?.response?.data,
       status: error?.response?.status,

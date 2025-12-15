@@ -26,7 +26,7 @@ export function useShiftSchedule(
       setShiftConfig(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch shift schedule');
-      console.error('Shift schedule fetch error:', err);
+      if (__DEV__) console.debug('Shift schedule fetch error:', err);
     } finally {
       setIsLoading(false);
     }

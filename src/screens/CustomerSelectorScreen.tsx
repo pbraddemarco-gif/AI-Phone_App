@@ -64,7 +64,7 @@ const CustomerSelectorScreen: React.FC<CustomerSelectorProps> = ({ navigation })
 
       // Don't auto-select - let user explicitly choose
     } catch (error) {
-      console.error('❌ Failed to load customer accounts:', error);
+      if (__DEV__) console.debug('❌ Failed to load customer accounts:', error);
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ const CustomerSelectorScreen: React.FC<CustomerSelectorProps> = ({ navigation })
         return;
       }
     } catch (error) {
-      console.error('❌ Failed to load plants:', error);
+      if (__DEV__) console.debug('❌ Failed to load plants:', error);
       setPlants([]);
     } finally {
       setLoadingPlants(false);
@@ -127,7 +127,7 @@ const CustomerSelectorScreen: React.FC<CustomerSelectorProps> = ({ navigation })
 
       navigation.replace('MachineList');
     } catch (error) {
-      console.error('❌ Failed to save customer selection:', error);
+      if (__DEV__) console.debug('❌ Failed to save customer selection:', error);
     }
   };
 

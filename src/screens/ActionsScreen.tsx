@@ -144,7 +144,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
         const data = await fetchActionTemplateSummaries();
         setTemplates(data);
       } catch (e: any) {
-        console.error('Failed to load action template list', e);
+        if (__DEV__) console.debug('Failed to load action template list', e);
         setError(e?.message || 'Failed to load action templates');
       } finally {
         setLoading(false);
@@ -190,23 +190,23 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
       try {
         const token = await getToken();
         if (!token) {
-          console.log('ℹ️ ActionsScreen: No token available for username extraction');
+          if (__DEV__) console.debug('ℹ️ ActionsScreen: No token available for username extraction');
           return;
         }
 
         const username = getUsernameFromToken(token);
         if (username) {
-          console.log('✅ ActionsScreen: Extracted username:', username);
+          if (__DEV__) console.debug('✅ ActionsScreen: Extracted username:', username);
           setFormState((prev) => {
             // Only set if not already set by user
             if (prev[createdByField.FieldName]) return prev;
             return { ...prev, [createdByField.FieldName]: username };
           });
         } else {
-          console.log('ℹ️ ActionsScreen: Could not extract username from token (non-JWT format)');
+          if (__DEV__) console.debug('ℹ️ ActionsScreen: Could not extract username from token (non-JWT format)');
         }
       } catch (e) {
-        console.warn('⚠️ ActionsScreen: Failed to get username from token', e);
+        if (__DEV__) console.debug('⚠️ ActionsScreen: Failed to get username from token', e);
       }
     };
 
@@ -279,7 +279,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
       setFormState(buildDefaultState(detail));
       await loadCategories(template.Name);
     } catch (e: any) {
-      console.error('Failed to load template detail', e);
+      if (__DEV__) console.debug('Failed to load template detail', e);
       setDetailError(e?.message || 'Failed to load template fields');
     } finally {
       setDetailLoading(false);
@@ -293,7 +293,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
       const data = await fetchActionCategories(documentType || 'NOTE');
       setCategories(data);
     } catch (e: any) {
-      console.error('Failed to load categories', e);
+      if (__DEV__) console.debug('Failed to load categories', e);
       setCategoriesError(e?.message || 'Failed to load categories');
     } finally {
       setCategoriesLoading(false);
@@ -341,7 +341,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
         return { ...prev, [field.FieldName]: [...list, ...newAttachments] };
       });
     } catch (e: any) {
-      console.error('Failed to pick documents', e);
+      if (__DEV__) console.debug('Failed to pick documents', e);
       Alert.alert('Upload failed', e?.message || 'Could not pick files.');
     }
   };
@@ -384,7 +384,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
         return { ...prev, [field.FieldName]: [...list, ...newAttachments] };
       });
     } catch (e: any) {
-      console.error('Failed to capture photo', e);
+      if (__DEV__) console.debug('Failed to capture photo', e);
       Alert.alert('Camera error', e?.message || 'Could not capture a photo.');
     }
   };
@@ -421,7 +421,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
         return { ...prev, [field.FieldName]: [...list, ...newAttachments] };
       });
     } catch (e: any) {
-      console.error('Failed to pick from gallery', e);
+      if (__DEV__) console.debug('Failed to pick from gallery', e);
       Alert.alert('Gallery error', e?.message || 'Could not pick photos.');
     }
   };
@@ -505,7 +505,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
 
       Alert.alert('Action saved', 'Form values saved successfully.');
     } catch (e: any) {
-      console.error('Submission failed', e);
+      if (__DEV__) console.debug('Submission failed', e);
       setSubmitError(e?.message || 'Failed to submit action');
       Alert.alert('Upload failed', e?.message || 'Failed to upload one or more files.');
     } finally {

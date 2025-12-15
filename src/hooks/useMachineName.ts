@@ -51,12 +51,12 @@ export function useMachineName(params: UseMachineNameParams): UseMachineNameResu
         dims: ['50479;2170'],
       });
 
-      console.log('🏭 Machine performance data:', result);
+      if (__DEV__) console.debug('🏭 Machine performance data:', result);
       setMachineName(result.DisplayName || result.MachineName || null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch machine name';
       setError(errorMessage);
-      console.error('Machine name fetch error:', err);
+      if (__DEV__) console.debug('Machine name fetch error:', err);
     } finally {
       setLoading(false);
     }

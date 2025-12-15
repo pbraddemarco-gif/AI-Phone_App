@@ -46,21 +46,21 @@ export async function getTagTypeOptions(params: TagTypeOptionsParams): Promise<T
   }
 
   const endpoint = `/tagtypes/${tagTypeId}/options?${queryParams.toString()}`;
-  console.log('🏷️ Fetching tag type options:', endpoint);
-  console.log('🏷️ Full URL:', authApiClient.defaults.baseURL + endpoint);
-  console.log('🏷️ Query params:', params);
+  if (__DEV__) console.debug('🏷️ Fetching tag type options:', endpoint);
+  if (__DEV__) console.debug('🏷️ Full URL:', authApiClient.defaults.baseURL + endpoint);
+  if (__DEV__) console.debug('🏷️ Query params:', params);
 
   try {
     const response = await authApiClient.get<TagTypeOption[]>(endpoint);
-    console.log('✅ Tag type options response status:', response.status);
-    console.log('✅ Tag type options response data:', JSON.stringify(response.data, null, 2));
-    console.log(
+    if (__DEV__) console.debug('✅ Tag type options response status:', response.status);
+    if (__DEV__) console.debug('✅ Tag type options response data:', JSON.stringify(response.data, null, 2));
+    if (__DEV__) console.debug(
       '✅ Tag type options count:',
       Array.isArray(response.data) ? response.data.length : 'not an array'
     );
     return response.data;
   } catch (error: any) {
-    console.error('❌ Tag type options error:', {
+    if (__DEV__) console.debug('❌ Tag type options error:', {
       message: error.message,
       status: error.response?.status,
       statusText: error.response?.statusText,

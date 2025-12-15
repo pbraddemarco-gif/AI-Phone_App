@@ -58,11 +58,13 @@ export function getAppConfig(): AppConfig {
 export function validateAppConfig(): void {
   try {
     const config = getAppConfig();
-    console.log('[Config] Environment:', config.environment);
-    console.log('[Config] Auth endpoint:', config.authBaseUrl);
-    console.log('[Config] API endpoint:', config.apiBaseUrl);
+    if (__DEV__) {
+      console.debug('[Config] Environment:', config.environment);
+      console.debug('[Config] Auth endpoint:', config.authBaseUrl);
+      console.debug('[Config] API endpoint:', config.apiBaseUrl);
+    }
   } catch (error) {
-    console.error('[Config] FATAL: Invalid configuration', error);
+    if (__DEV__) console.debug('[Config] FATAL: Invalid configuration', error);
     throw error;
   }
 }

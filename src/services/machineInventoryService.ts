@@ -109,10 +109,10 @@ export async function getMachineInventory(
 
     return machineData;
   } catch (error: any) {
-    console.error('❌ Machine inventory error:', error.message);
+    if (__DEV__) console.debug('❌ Machine inventory error:', error.message);
     if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
+      if (__DEV__) console.debug('Response status:', error.response.status);
+      if (__DEV__) console.debug('Response data:', error.response.data);
     }
     throw new Error(
       error?.response?.data?.Message || error?.message || 'Failed to fetch machine inventory'

@@ -60,7 +60,7 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
         const data = await getMachineInventory(plantId, 'current');
         setMachines(data);
       } catch (e: any) {
-        console.error('Failed to load machines for picker', e);
+        if (__DEV__) console.debug('Failed to load machines for picker', e);
         setError(e?.message || 'Failed to load machines');
       } finally {
         setLoading(false);

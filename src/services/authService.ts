@@ -35,7 +35,7 @@ class AuthService {
       try {
         l();
       } catch (e) {
-        console.warn('Auth listener error', e);
+        if (__DEV__) console.debug('Auth listener error', e);
       }
     }
   }
@@ -88,7 +88,7 @@ class AuthService {
           try {
             parsedAccount = JSON.parse(data.account);
           } catch (e) {
-            console.error('❌ Failed to parse account string:', e);
+            if (__DEV__) console.debug('❌ Failed to parse account string:', e);
             parsedAccount = null;
           }
         }
@@ -124,7 +124,7 @@ class AuthService {
 
       // Security: Log only metadata, never token values
       if (__DEV__) {
-        console.log('🔍 AuthService: Login response received', {
+        console.debug('🔍 AuthService: Login response received', {
           hasAccessToken: !!access_token,
           accessTokenLength: access_token?.length || 0,
           isJWT: access_token ? access_token.split('.').length === 3 : false,
@@ -149,8 +149,8 @@ class AuthService {
 
         // Don't log full error payload in production (may contain sensitive info)
         if (__DEV__) {
-          console.error('Status:', status);
-          console.error('Payload:', payload);
+          if (__DEV__) console.debug('Status:', status);
+          if (__DEV__) console.debug('Payload:', payload);
         }
 
         // Provide user-friendly error messages without leaking details

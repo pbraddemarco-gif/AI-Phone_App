@@ -150,10 +150,10 @@ const ProductionOrdersScreen: React.FC<ProductionOrdersProps> = ({ navigation })
         if (selected?.ParentId) {
           setClientId(selected.ParentId);
         } else {
-          console.warn('⚠️ No client ID found in selected customer');
+          if (__DEV__) console.debug('⚠️ No client ID found in selected customer');
         }
       } catch (err) {
-        console.error('Failed to load client:', err);
+        if (__DEV__) console.debug('Failed to load client:', err);
       }
     };
     loadClient();
@@ -169,7 +169,7 @@ const ProductionOrdersScreen: React.FC<ProductionOrdersProps> = ({ navigation })
 
         setMachineNames(nameMap);
       } catch (err) {
-        console.error('Failed to fetch machine names:', err);
+        if (__DEV__) console.debug('Failed to fetch machine names:', err);
       }
     };
 

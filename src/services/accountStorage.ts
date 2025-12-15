@@ -15,7 +15,7 @@ export async function saveCustomerAccounts(accounts: CustomerAccount[]): Promise
   try {
     await AsyncStorage.setItem(CUSTOMER_ACCOUNTS_KEY, JSON.stringify(accounts));
   } catch (error) {
-    console.error('Failed to save customer accounts:', error);
+    if (__DEV__) console.debug('Failed to save customer accounts:', error);
   }
 }
 
@@ -29,10 +29,12 @@ export async function getCustomerAccounts(): Promise<CustomerAccount[]> {
       return [];
     }
     const parsed = JSON.parse(data);
-    console.log('✅ Loaded customer accounts:', parsed);
+    if (__DEV__) {
+      console.debug('✅ Loaded customer accounts:', parsed);
+    }
     return parsed;
   } catch (error) {
-    console.error('Failed to load customer accounts:', error);
+    if (__DEV__) console.debug('Failed to load customer accounts:', error);
     return [];
   }
 }
@@ -44,6 +46,6 @@ export async function clearCustomerAccounts(): Promise<void> {
   try {
     await AsyncStorage.removeItem(CUSTOMER_ACCOUNTS_KEY);
   } catch (error) {
-    console.error('Failed to clear customer accounts:', error);
+    if (__DEV__) console.debug('Failed to clear customer accounts:', error);
   }
 }

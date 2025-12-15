@@ -91,7 +91,7 @@ const tokenInterceptor = async (config: InternalAxiosRequestConfig) => {
 const unauthorizedInterceptor = async (error: AxiosError) => {
   if (error.response?.status === 401) {
     await clearToken();
-    console.warn('Authentication token expired or invalid');
+    if (__DEV__) console.debug('Authentication token expired or invalid');
   }
   return Promise.reject(error);
 };

@@ -110,7 +110,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
           await handleCustomerChange(autoCustomer);
         }
       } catch (err) {
-        console.error('Failed to load customer data:', err);
+        if (__DEV__) console.debug('Failed to load customer data:', err);
       }
     };
     loadCustomerData();
@@ -118,10 +118,10 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
 
   const handleCustomerChange = async (customer: CustomerAccount) => {
     try {
-      console.log('🔄 MachineListScreen: Customer/Plant change requested');
-      console.log('  - Plant ID:', customer.Id);
-      console.log('  - Company:', customer.Name);
-      console.log('  - Plant:', customer.DisplayName);
+      if (__DEV__) console.debug('🔄 MachineListScreen: Customer/Plant change requested');
+      if (__DEV__) console.debug('  - Plant ID:', customer.Id);
+      if (__DEV__) console.debug('  - Company:', customer.Name);
+      if (__DEV__) console.debug('  - Plant:', customer.DisplayName);
 
       await saveSelectedCustomer(customer);
       setSelectedCustomer(customer);
@@ -141,7 +141,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
           );
           setSelectedPlant(matchingPlant || null);
         } catch (err) {
-          console.error('❌ Failed to reload plants:', err);
+          if (__DEV__) console.debug('❌ Failed to reload plants:', err);
         }
       } else {
         // Same company, just update the selected plant
@@ -156,11 +156,11 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
           await refetch();
           await fetchMachineStatuses();
         } catch (e) {
-          console.error('❌ Deferred refetch failed:', e);
+          if (__DEV__) console.debug('❌ Deferred refetch failed:', e);
         }
       }, 0);
     } catch (err) {
-      console.error('❌ Failed to change customer:', err);
+      if (__DEV__) console.debug('❌ Failed to change customer:', err);
     }
   };
 
@@ -211,7 +211,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         await handleCustomerChange(autoCustomer);
       }
     } catch (err) {
-      console.error('Failed to load plants:', err);
+      if (__DEV__) console.debug('Failed to load plants:', err);
       setPlants([]);
       // Still set a temp customer to keep UI consistent
       const tempCustomer: CustomerAccount = {
@@ -265,14 +265,14 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         return next;
       });
     } catch (err) {
-      console.error('Failed to fetch machine statuses:', err);
+      if (__DEV__) console.debug('Failed to fetch machine statuses:', err);
     }
   };
 
   const fetchProductionGoals = async (targetMachines?: MachineInventoryItem[]) => {
     // Check feature flag - skip if disabled
     if (!DEV_FLAGS.USE_PRODUCTION_GOAL_API) {
-      console.log('🚧 Production goal API disabled via feature flag');
+      if (__DEV__) console.debug('🚧 Production goal API disabled via feature flag');
       return;
     }
 
@@ -289,7 +289,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         batches.push(machineIds.slice(i, i + BATCH_SIZE));
       }
 
-      console.log(`📊 Fetching production goals in ${batches.length} batches`);
+      if (__DEV__) console.debug(`📊 Fetching production goals in ${batches.length} batches`);
 
       for (const batch of batches) {
         const goals = await getProductionGoals({ machineIds: batch, dateType });
@@ -302,9 +302,9 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         }
       }
 
-      console.log(`✅ Production goals loaded for ${machineIds.length} machines`);
+      if (__DEV__) console.debug(`✅ Production goals loaded for ${machineIds.length} machines`);
     } catch (err: any) {
-      console.error('❌ Production goals fetch failed:', err?.message || err);
+      if (__DEV__) console.debug('❌ Production goals fetch failed:', err?.message || err);
     }
   };
 
@@ -319,19 +319,19 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
 
   const fetchShiftSchedules = async (machineId: number) => {
     try {
-      console.log(`📅 Fetching shift schedules for machine ${machineId}`);
+      if (__DEV__) console.debug(`📅 Fetching shift schedules for machine ${machineId}`);
       const [current, previous] = await Promise.all([
         getShiftSchedule(machineId, 'current'),
         getShiftSchedule(machineId, 'previous'),
       ]);
-      console.log('📅 Shift schedules received:', {
+      if (__DEV__) console.debug('📅 Shift schedules received:', {
         current: current?.Items?.[0],
         previous: previous?.Items?.[0],
       });
       setCurrentShiftSchedule(current);
       setLastShiftSchedule(previous);
     } catch (error) {
-      console.error('❌ Failed to fetch shift schedules:', error);
+      if (__DEV__) console.debug('❌ Failed to fetch shift schedules:', error);
     }
   };
 
@@ -450,12 +450,12 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
 
             if (hoursElapsed > 0) {
               adjustedGoal = goalData.PartsAvgHourlyGoal * hoursElapsed;
-              console.log(
+              if (__DEV__) console.debug(
                 `⏱️ ${displayName}: Shift started at ${shiftStart.toLocaleTimeString()}, ${hoursElapsed.toFixed(2)}h elapsed, hourly goal: ${goalData.PartsAvgHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
               );
             }
           } catch (e) {
-            console.error('Failed to calculate adjusted goal:', e);
+            if (__DEV__) console.debug('Failed to calculate adjusted goal:', e);
           }
         }
       }
@@ -470,7 +470,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
 
         if (hoursElapsed > 0) {
           adjustedGoal = item.PartsHourlyGoal * hoursElapsed;
-          console.log(
+          if (__DEV__) console.debug(
             `⏱️ ${displayName} (fallback): ${hoursElapsed.toFixed(2)}h elapsed since midnight, hourly goal: ${item.PartsHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
           );
         }
@@ -513,7 +513,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         await fetchMachineStatuses(childMachines);
         await fetchProductionGoals(childMachines);
       } catch (err: any) {
-        console.error('❌ Failed to load machines for line:', err);
+        if (__DEV__) console.debug('❌ Failed to load machines for line:', err);
         setLineError((prev) => ({
           ...prev,
           [item.MachineId]: err?.message || 'Failed to load machines for this line',
@@ -536,7 +536,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
           ]}
           onPress={() => {
             try {
-              console.log('🖱️ Row tapped:', {
+              if (__DEV__) console.debug('🖱️ Row tapped:', {
                 machineId: item.MachineId,
                 machineName: displayName,
                 type: item?.MachineType?.Name,
@@ -558,7 +558,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
                 partsHourlyGoal: item.PartsHourlyGoal || 0,
               });
             } catch (e) {
-              console.error('❌ Navigation tap handler error:', e);
+              if (__DEV__) console.debug('❌ Navigation tap handler error:', e);
             }
           }}
         >
@@ -630,7 +630,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
                           childAdjustedGoal = childGoalData.PartsAvgHourlyGoal * hoursElapsed;
                         }
                       } catch (e) {
-                        console.error('Failed to calc child adjusted goal:', e);
+                        if (__DEV__) console.debug('Failed to calc child adjusted goal:', e);
                       }
                     }
                   }
@@ -711,7 +711,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
     try {
       await authService.logout();
     } catch (e) {
-      console.warn('Logout failed', e);
+      if (__DEV__) console.debug('Logout failed', e);
     }
   };
 

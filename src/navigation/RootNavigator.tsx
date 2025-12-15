@@ -41,19 +41,19 @@ export default function RootNavigator() {
   const checkAuthStatus = async () => {
     try {
       if (DEV_FLAGS.FORCE_LOGIN_ON_START && !devForceApplied.current) {
-        console.log('🧪 DEV: FORCE_LOGIN_ON_START is enabled — starting at Login');
+        if (__DEV__) console.debug('🧪 DEV: FORCE_LOGIN_ON_START is enabled — starting at Login');
         setIsAuthenticated(false);
         devForceApplied.current = true;
         return;
       }
       const authenticated = await authService.isAuthenticated();
-      console.log(
+      if (__DEV__) console.debug(
         '🔍 Auth status check:',
         authenticated ? 'AUTHENTICATED ✅' : 'NOT AUTHENTICATED ❌'
       );
       setIsAuthenticated(authenticated);
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      if (__DEV__) console.debug('Error checking auth status:', error);
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);

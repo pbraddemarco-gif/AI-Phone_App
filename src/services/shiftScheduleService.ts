@@ -35,7 +35,7 @@ export async function getShiftSchedule(
     mode,
   };
 
-  console.log(`📅 Fetching shift schedule for machine ${machineId}, mode: ${mode}`);
+  if (__DEV__) console.debug(`📅 Fetching shift schedule for machine ${machineId}, mode: ${mode}`);
 
   try {
     const response = await authApiClient.get<any>(`/machines/${machineId}/shiftschedules`, {
@@ -45,27 +45,27 @@ export async function getShiftSchedule(
     // API returns array format: [{TagId, ShiftId, HourStart, ...}] instead of {Items: [...]}
     let shiftData: any;
     if (Array.isArray(response.data)) {
-      console.log(
+      if (__DEV__) console.debug(
         `✅ Shift schedule response: ${response.data.length} shift(s) returned (array format)`
       );
       shiftData = response.data[0]; // Extract first shift from array
     } else if (response.data.Items && Array.isArray(response.data.Items)) {
-      console.log(
+      if (__DEV__) console.debug(
         `✅ Shift schedule response: ${response.data.Items.length} shift(s) returned (Items format)`
       );
       shiftData = response.data.Items[0];
     } else {
-      console.warn('⚠️ Unexpected shift schedule response format:', response.data);
+      if (__DEV__) console.debug('⚠️ Unexpected shift schedule response format:', response.data);
       return { Items: [], TotalCount: 0 };
     }
 
     if (!shiftData) {
-      console.warn('⚠️ No shift data in response');
+      if (__DEV__) console.debug('⚠️ No shift data in response');
       return { Items: [], TotalCount: 0 };
     }
 
     // Log the raw shift data for debugging
-    console.log('📋 Raw shift data:', {
+    if (__DEV__) console.debug('📋 Raw shift data:', {
       ShiftId: shiftData.ShiftId || shiftData.Id,
       TagId: shiftData.TagId,
       HourStart: shiftData.HourStart,
@@ -178,7 +178,7 @@ export async function getShiftSchedule(
       // Previous shift starts one shift duration before it ends
       startDate = new Date(endDate.getTime() - shiftDurationMs);
 
-      console.log('🔍 Previous shift calculation:', {
+      if (__DEV__) console.debug('🔍 Previous shift calculation:', {
         shiftEndHour: shiftData.HourEnd,
         shiftEndMinute: shiftData.MinuteEnd,
         nextShiftStartTime,
@@ -190,7 +190,7 @@ export async function getShiftSchedule(
       });
     }
 
-    console.log(`📅 Calculated ${mode} shift times:`, {
+    if (__DEV__) console.debug(`📅 Calculated ${mode} shift times:`, {
       start: toLocalISOString(startDate),
       end: toLocalISOString(endDate),
     });
@@ -221,10 +221,10 @@ export async function getShiftSchedule(
 
     return transformedResponse;
   } catch (error: any) {
-    console.error('❌ Shift schedule error:', error.message);
+    if (__DEV__) console.debug('❌ Shift schedule error:', error.message);
     if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
+      if (__DEV__) console.debug('Response status:', error.response.status);
+      if (__DEV__) console.debug('Response data:', error.response.data);
     }
     throw new Error(
       error?.response?.data?.Message || error?.message || 'Failed to fetch shift schedule'
