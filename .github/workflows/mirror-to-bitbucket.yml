@@ -1,0 +1,47 @@
+name: Mirror to Bitbucket
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    if: github.repository_owner == 'pbraddemarco-gif'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate inputs
+        env:
+          BITBUCKET_REPO: ${{ vars.BITBUCKET_REPO }}
+          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
+          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+        run: |
+          if [ -z "$BITBUCKET_REPO" ]; then
+            echo "BITBUCKET_REPO variable is required (format: workspace/repo)" && exit 1
+          fi
+          if [ -z "$BITBUCKET_USERNAME" ] || [ -z "$BITBUCKET_APP_PASSWORD" ]; then
+            echo "Bitbucket credentials not provided" && exit 1
+          fi
+
+      - name: Configure git user
+        run: |
+          git config user.name "AI Mirror Bot"
+          git config user.email "ai-mirror-bot@users.noreply.github.com"
+
+      - name: Add Bitbucket remote
+        env:
+          BITBUCKET_REPO: ${{ vars.BITBUCKET_REPO }}
+          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
+          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+        run: |
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
+
+      - name: Push main and tags
+        run: |
+          git push bitbucket main --tags

@@ -89,9 +89,11 @@ We mirror GitHub changes to Bitbucket to keep downstream consumers in sync.
 1. Add Bitbucket remote locally:
   - `git remote add bitbucket https://bitbucket.org/<workspace>/<repo>.git`
 2. Update CI pipeline to push on successful `main` merges:
-  - Use a GitHub Action with a PAT to run `git push bitbucket main --tags`.
-3. Validate: `git remote -v` shows both `origin` (GitHub) and `bitbucket` (Bitbucket).
-4. Document any credential storage (GitHub Secrets for PAT, Bitbucket app passwords).
+  - Use the provided workflow `.github/workflows/mirror-to-bitbucket.yml`.
+  - Repository variable: `BITBUCKET_REPO` (format: `workspace/repo`).
+  - Secrets: `BITBUCKET_USERNAME`, `BITBUCKET_APP_PASSWORD`.
+ 3. Validate: `git remote -v` shows both `origin` (GitHub) and `bitbucket` (Bitbucket).
+ 4. Document any credential storage (GitHub Secrets for PAT, Bitbucket app passwords).
 
 ### Checklist
 - Release branch merged to `main` on GitHub.
