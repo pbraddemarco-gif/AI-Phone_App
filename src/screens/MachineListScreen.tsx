@@ -324,7 +324,7 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         getShiftSchedule(machineId, 'current'),
         getShiftSchedule(machineId, 'previous'),
       ]);
-      console.log(`📅 Shift schedules received:`, {
+      console.log('📅 Shift schedules received:', {
         current: current?.Items?.[0],
         previous: previous?.Items?.[0],
       });
@@ -984,7 +984,12 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>⚠️ {error}</Text>
-            <TouchableOpacity onPress={refetch} style={styles.retryButton}>
+            <TouchableOpacity
+              onPress={() => {
+                void refetch();
+              }}
+              style={styles.retryButton}
+            >
               <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
           </View>

@@ -6,7 +6,7 @@
 import axios, { AxiosError } from 'axios';
 import { authApiClient } from './apiClient';
 import { saveToken, saveRefreshToken, getToken, clearToken } from './tokenStorage';
-import type { AuthTokenResponse, LoginCredentials, AuthError } from '../types/auth';
+import type { AuthTokenResponse, LoginCredentials, AuthError, CustomerAccount } from '../types/auth';
 import { extractCustomerAccounts } from './tokenParser';
 import {
   saveCustomerAccounts,
@@ -80,10 +80,10 @@ class AuthService {
 
       const data = response.data;
 
-      let accountData = null;
+      let accountData: CustomerAccount[] = [];
 
       if (data.account) {
-        let parsedAccount = data.account;
+        let parsedAccount: any = data.account;
         if (typeof data.account === 'string') {
           try {
             parsedAccount = JSON.parse(data.account);
@@ -95,19 +95,19 @@ class AuthService {
 
         if (parsedAccount) {
           if (Array.isArray(parsedAccount)) {
-            accountData = parsedAccount;
+            accountData = parsedAccount as CustomerAccount[];
           } else if (typeof parsedAccount === 'object') {
-            const keys = Object.keys(parsedAccount);
+            const keys = Object.keys(parsedAccount as Record<string, unknown>);
             if (keys.length > 0 && keys.every((k) => !isNaN(Number(k)))) {
-              accountData = Object.values(parsedAccount);
-            } else if (parsedAccount.Clients) {
-              accountData = parsedAccount.Clients;
+              accountData = Object.values(parsedAccount) as CustomerAccount[];
+            } else if ((parsedAccount as any).Clients) {
+              accountData = (parsedAccount as any).Clients as CustomerAccount[];
             }
           }
         }
       }
 
-      if (accountData && accountData.length > 0) {
+      if (accountData.length > 0) {
         const customerAccounts = accountData.map((client: any) => ({
           Id: client.Id || client.id || 0,
           Name: client.Name || client.name || 'Unknown',

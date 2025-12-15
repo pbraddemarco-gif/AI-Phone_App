@@ -46,7 +46,7 @@ export async function getProductionGoals(params: {
         `⚠️ Production goal API timeout for ${machineIds.length} machines - using fallback`
       );
     } else if (error.response?.status === 504) {
-      console.warn(`⚠️ Production goal API gateway timeout (504) - using fallback`);
+      console.warn('⚠️ Production goal API gateway timeout (504) - using fallback');
     } else {
       console.error('❌ Failed to fetch production goals:', error.message || error);
     }

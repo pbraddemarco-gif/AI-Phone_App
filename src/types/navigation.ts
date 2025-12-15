@@ -8,7 +8,7 @@ export type RootStackParamList = {
   Details: { itemId?: string } | undefined;
   CustomerSelector: undefined;
   MachineList: undefined;
-  ProductionDashboard: { machineId?: number; machineName?: string };
+  ProductionDashboard: { machineId?: number; machineName?: string; partsHourlyGoal?: number };
   MachineShiftComparison: { machineId: number };
   PlantLayout: { machineId?: number; machineName?: string };
   ProductionOrders: undefined;

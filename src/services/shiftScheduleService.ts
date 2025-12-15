@@ -56,12 +56,12 @@ export async function getShiftSchedule(
       shiftData = response.data.Items[0];
     } else {
       console.warn('⚠️ Unexpected shift schedule response format:', response.data);
-      return { Items: [] };
+      return { Items: [], TotalCount: 0 };
     }
 
     if (!shiftData) {
       console.warn('⚠️ No shift data in response');
-      return { Items: [] };
+      return { Items: [], TotalCount: 0 };
     }
 
     // Log the raw shift data for debugging
@@ -204,6 +204,8 @@ export async function getShiftSchedule(
           TagId: shiftData.TagId,
           ShiftGroupId: shiftData.ShiftGroupId || 0,
           Name: shiftData.Name || `Shift ${shiftData.ShiftId || shiftData.Id}`,
+          DisplayName: shiftData.DisplayName || shiftData.Name || `Shift ${shiftData.ShiftId || shiftData.Id}`,
+          Type: shiftData.Type || 'Shift',
           StartDayOfWeekName: shiftData.StartDayOfWeekName || '',
           EndDayOfWeekName: shiftData.EndDayOfWeekName || '',
           HourStart: shiftData.HourStart,
@@ -214,6 +216,7 @@ export async function getShiftSchedule(
           EndDateTime: toLocalISOString(endDate),
         },
       ],
+      TotalCount: 1,
     };
 
     return transformedResponse;

@@ -244,7 +244,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     console.log('📈 Production data state:', {
       loading,
       hasError: !!error,
-      errorMessage: error?.message,
+      errorMessage: error || undefined,
       hasData: !!productionData,
       dataLength: productionData?.length || 0,
       shiftView,
@@ -499,7 +499,11 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
                 : 'Unknown'}
           </Text>
         </View>
-        <TouchableOpacity onPress={refetchStatus}>
+        <TouchableOpacity
+          onPress={() => {
+            void refetchStatus();
+          }}
+        >
           <Text style={[styles.alertClose, { color: '#FFFFFF' }]}>⟳</Text>
         </TouchableOpacity>
       </View>
@@ -727,7 +731,9 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
           refreshControl={
             <RefreshControl
               refreshing={loading}
-              onRefresh={refetch}
+              onRefresh={() => {
+                void refetch();
+              }}
               tintColor="#007AFF"
               colors={['#007AFF']}
             />
@@ -768,7 +774,9 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
           refreshControl={
             <RefreshControl
               refreshing={faultsLoading}
-              onRefresh={refetchFaults}
+              onRefresh={() => {
+                void refetchFaults();
+              }}
               tintColor="#007AFF"
               colors={['#007AFF']}
             />
