@@ -50,7 +50,7 @@ export function useCurrentProduct(params: UseCurrentProductParams): UseCurrentPr
         dateType: 'calendar',
       });
 
-      console.log('🏷️ Current product raw options:', JSON.stringify(result));
+      if (__DEV__) console.debug('🏷️ Current product raw options:', JSON.stringify(result));
 
       const extractCode = (name: string): string => {
         // Common patterns to try in order
@@ -88,16 +88,16 @@ export function useCurrentProduct(params: UseCurrentProductParams): UseCurrentPr
         .sort((a, b) => b.Id - a.Id);
       const selected = pool[0];
       const code = selected ? extractCode(selected.Name) : null;
-      console.log('🏷️ Selected product option:', selected ? selected.Name : 'none');
-      console.log('🏷️ Extracted product code (parsed):', code);
+      if (__DEV__) console.debug('🏷️ Selected product option:', selected ? selected.Name : 'none');
+      if (__DEV__) console.debug('🏷️ Extracted product code (parsed):', code);
       if (selected && !code) {
-        console.log('🏷️ WARNING: Failed to parse product code from option name');
+        if (__DEV__) console.debug('🏷️ WARNING: Failed to parse product code from option name');
       }
       setProductId(code);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch current product';
       setError(errorMessage);
-      console.error('Current product fetch error:', err);
+      if (__DEV__) console.debug('Current product fetch error:', err);
     } finally {
       setLoading(false);
     }

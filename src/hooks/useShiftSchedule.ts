@@ -9,7 +9,10 @@ interface UseShiftScheduleResult {
   refresh: () => Promise<void>;
 }
 
-export function useShiftSchedule(machineId: string, mode?: string): UseShiftScheduleResult {
+export function useShiftSchedule(
+  machineId: string,
+  mode?: 'current' | 'previous'
+): UseShiftScheduleResult {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +26,7 @@ export function useShiftSchedule(machineId: string, mode?: string): UseShiftSche
       setShiftConfig(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch shift schedule');
-      console.error('Shift schedule fetch error:', err);
+      if (__DEV__) console.debug('Shift schedule fetch error:', err);
     } finally {
       setIsLoading(false);
     }

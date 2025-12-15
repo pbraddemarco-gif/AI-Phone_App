@@ -9,6 +9,10 @@
       "distribution": "internal",
       "ios": {
         "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "http://localhost:3001/api/data",
+        "EXPO_PUBLIC_AUTH_BASE": "http://localhost:3001/api/auth"
       }
     },
     "preview": {
@@ -20,6 +24,10 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com",
+        "EXPO_PUBLIC_AUTH_BASE": "https://app.automationintellect.com/api"
       }
     },
     "simulator": {
@@ -30,12 +38,18 @@
     "production": {
       "ios": {
         "resourceClass": "m-medium",
-        "autoIncrement": true
+        "autoIncrement": true,
+        "bundler": "metro"
       },
       "android": {
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
-      }
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com",
+        "EXPO_PUBLIC_AUTH_BASE": "https://app.automationintellect.com/api"
+      },
+      "channel": "production"
     }
   },
   "submit": {

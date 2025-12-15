@@ -29,20 +29,20 @@ export function useMachineStatus({
     setError(null);
 
     try {
-      console.log('🔍 Fetching machine status for machine ID:', machineId);
+      if (__DEV__) console.debug('🔍 Fetching machine status for machine ID:', machineId);
       const statuses = await productionService.getMachineStatus([machineId.toString()]);
-      console.log('📊 Machine status API response:', JSON.stringify(statuses, null, 2));
+      if (__DEV__) console.debug('📊 Machine status API response:', JSON.stringify(statuses, null, 2));
       if (statuses && statuses.length > 0) {
-        console.log('✅ Setting status to:', statuses[0]);
+        if (__DEV__) console.debug('✅ Setting status to:', statuses[0]);
         setStatus(statuses[0]);
       } else {
-        console.log('⚠️ No status returned from API');
+        if (__DEV__) console.debug('⚠️ No status returned from API');
         setStatus(null);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch machine status';
       setError(errorMessage);
-      console.error('❌ Machine status fetch error:', err);
+      if (__DEV__) console.debug('❌ Machine status fetch error:', err);
     } finally {
       setLoading(false);
     }

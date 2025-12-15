@@ -113,7 +113,7 @@ export async function getProductionHistory(params: ProductionHistoryParams): Pro
     queryParams.filter = filter;
   }
 
-  console.log('📊 Fetching production history for machine', machineId);
+  if (__DEV__) console.debug('📊 Fetching production history for machine', machineId);
 
   try {
     // Use data client via proxy. Prefix with "/api" so proxy forwards to EB "/api/..." path.
@@ -122,10 +122,10 @@ export async function getProductionHistory(params: ProductionHistoryParams): Pro
       { params: queryParams }
     );
 
-    console.log('✅ Production history response:', response.data.length, 'modes returned');
+    if (__DEV__) console.debug('✅ Production history response:', response.data.length, 'modes returned');
     return response.data;
   } catch (error: any) {
-    console.error('❌ Production history error:', error.message);
+    if (__DEV__) console.debug('❌ Production history error:', error.message);
     throw error;
   }
 }

@@ -24,7 +24,7 @@ export async function getSelectedCustomer(): Promise<CustomerAccount | null> {
     if (!json) return null;
     return JSON.parse(json);
   } catch (error) {
-    console.error('Failed to get selected customer:', error);
+    if (__DEV__) console.debug('Failed to get selected customer:', error);
     return null;
   }
 }

@@ -32,23 +32,23 @@ export async function getProductionGoals(params: {
     machineIds.forEach((id) => queryParams.append('ids', id.toString()));
     queryParams.append('dateType', dateType);
 
-    console.log(`🎯 Fetching production goals for ${machineIds.length} machines (${dateType})`);
+    if (__DEV__) console.debug(`🎯 Fetching production goals for ${machineIds.length} machines (${dateType})`);
 
     const response = await apiClient.get<ProductionGoalResponse[]>(
       `/machines/productiongoal?${queryParams.toString()}`
     );
 
-    console.log(`✅ Production goals fetched: ${response.data?.length || 0} results`);
+    if (__DEV__) console.debug(`✅ Production goals fetched: ${response.data?.length || 0} results`);
     return response.data || [];
   } catch (error: any) {
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      console.warn(
+      if (__DEV__) console.debug(
         `⚠️ Production goal API timeout for ${machineIds.length} machines - using fallback`
       );
     } else if (error.response?.status === 504) {
-      console.warn(`⚠️ Production goal API gateway timeout (504) - using fallback`);
+      if (__DEV__) console.debug('⚠️ Production goal API gateway timeout (504) - using fallback');
     } else {
-      console.error('❌ Failed to fetch production goals:', error.message || error);
+      if (__DEV__) console.debug('❌ Failed to fetch production goals:', error.message || error);
     }
     return [];
   }
@@ -69,7 +69,7 @@ export function getShiftStartFromGoal(goal: ProductionGoalResponse): Date | null
   try {
     return new Date(firstTimestamp);
   } catch (e) {
-    console.error('Failed to parse shift start time:', firstTimestamp, e);
+    if (__DEV__) console.debug('Failed to parse shift start time:', firstTimestamp, e);
     return null;
   }
 }

@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop, release/**]
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run TypeScript type checking
+        run: npm run typecheck
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check for console.log statements
+        run: |
+          if grep -r "console\.log" src/ --exclude-dir=__tests__ --exclude="*.test.ts" --exclude="*.test.tsx"; then
+            echo "❌ Found console.log statements in source code"
+            exit 1
+          else
+            echo "✅ No console.log statements found"
+          fi
+
+  security-check:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for secrets in code
+        run: |
+          echo "Scanning for potential secrets..."
+
+          # Check for common secret patterns (excluding test files and docs)
+          if grep -rE "(password|secret|api[_-]?key|private[_-]?key)['\"]?\s*[:=]\s*['\"][^'\"]{8,}" \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            --exclude-dir=__tests__ \
+            --exclude="*.md" \
+            --exclude="*.test.ts" \
+            . ; then
+            echo "⚠️  Potential secrets found - please review"
+            exit 1
+          fi
+
+          echo "✅ No obvious secrets detected"
+
+      - name: Check for HTTP URLs in production code
+        run: |
+          # Allow HTTP in docs, tests, and proxy config
+          if grep -r "http://" src/ \
+            --exclude-dir=__tests__ \
+            --exclude="*.md" \
+            --exclude="apiClient.ts" | grep -v "localhost"; then
+            echo "⚠️  Found HTTP URLs in production code (should use HTTPS)"
+            exit 1
+          fi
+
+          echo "✅ No insecure HTTP URLs in production code"
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high --production || true
+
+  build-preview:
+    name: Build iOS Preview
+    runs-on: ubuntu-latest
+    # Only run on main branch pushes or when specifically requested
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'build-ios')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build iOS Preview
+        run: eas build --platform ios --profile preview --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Comment build status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 iOS preview build started! Check status at https://expo.dev/accounts/pbraddemarco-gif/projects/ai-production-monitor/builds'
+            })

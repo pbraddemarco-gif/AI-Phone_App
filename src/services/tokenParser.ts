@@ -31,14 +31,14 @@ export interface DecodedToken {
 export function decodeJwtToken(token: string): DecodedToken | null {
   try {
     if (!token || typeof token !== 'string') {
-      console.warn('⚠️ Token is not a string or empty');
+      if (__DEV__) console.debug('⚠️ Token is not a string or empty');
       return null;
     }
 
     // JWT format: header.payload.signature
     const parts = token.split('.');
     if (parts.length !== 3) {
-      console.warn(
+      if (__DEV__) console.debug(
         `⚠️ Token is not in JWT format (has ${parts.length} parts instead of 3) - skipping decode`
       );
       return null;
@@ -64,10 +64,10 @@ export function decodeJwtToken(token: string): DecodedToken | null {
     }
 
     const parsed = JSON.parse(decoded);
-    console.log('🔍 Decoded JWT payload keys:', Object.keys(parsed));
+    if (__DEV__) console.debug('🔍 Decoded JWT payload keys:', Object.keys(parsed));
     return parsed;
   } catch (error) {
-    console.error('Failed to decode JWT token:', error);
+    if (__DEV__) console.debug('Failed to decode JWT token:', error);
     return null;
   }
 }
@@ -81,11 +81,11 @@ export function extractCustomerAccounts(token: string): CustomerAccount[] {
   const decoded = decodeJwtToken(token);
 
   if (!decoded) {
-    console.error('Could not decode token');
+    if (__DEV__) console.debug('Could not decode token');
     return [];
   }
 
-  console.log('📋 Full decoded token payload:', JSON.stringify(decoded, null, 2));
+  if (__DEV__) console.debug('📋 Full decoded token payload:', JSON.stringify(decoded, null, 2));
 
   // Try different possible property names for customer accounts
   const possibleKeys = [
@@ -100,19 +100,19 @@ export function extractCustomerAccounts(token: string): CustomerAccount[] {
 
   for (const key of possibleKeys) {
     if (decoded[key as keyof DecodedToken]) {
-      console.log(`✅ Found customer data in token property: "${key}"`);
+      if (__DEV__) console.debug(`✅ Found customer data in token property: "${key}"`);
       accountData = decoded[key as keyof DecodedToken];
       break;
     }
   }
 
   if (!accountData) {
-    console.warn('⚠️ No account information found in token. Available keys:', Object.keys(decoded));
+    if (__DEV__) console.debug('⚠️ No account information found in token. Available keys:', Object.keys(decoded));
     return [];
   }
 
   if (!Array.isArray(accountData)) {
-    console.warn('⚠️ Account data is not an array:', accountData);
+    if (__DEV__) console.debug('⚠️ Account data is not an array:', accountData);
     return [];
   }
 
@@ -122,9 +122,9 @@ export function extractCustomerAccounts(token: string): CustomerAccount[] {
     DisplayName: acc.DisplayName || acc.displayName || acc.Name || acc.name || 'Unknown',
   }));
 
-  console.log(`✅ Found ${customers.length} customer account(s):`);
+  if (__DEV__) console.debug(`✅ Found ${customers.length} customer account(s):`);
   customers.forEach((customer) => {
-    console.log(`  - [${customer.Id}] ${customer.Name} (${customer.DisplayName})`);
+    if (__DEV__) console.debug(`  - [${customer.Id}] ${customer.Name} (${customer.DisplayName})`);
   });
 
   return customers;

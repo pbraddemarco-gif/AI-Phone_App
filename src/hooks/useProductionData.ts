@@ -41,7 +41,7 @@ export function useProductionData(
       setProductionHistory(historyData.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch production data');
-      console.error('Production data fetch error:', err);
+      if (__DEV__) console.debug('Production data fetch error:', err);
     } finally {
       setIsLoading(false);
     }

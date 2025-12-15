@@ -127,33 +127,33 @@ export async function getProductionHistory(
   }
 
   const endpoint = `/machines/${machineId}/productionhistory?${queryParams.toString()}`;
-  console.log('📊 Fetching production history:', endpoint);
+  if (__DEV__) console.debug('📊 Fetching production history:', endpoint);
 
   try {
     // Make API request
     const response = await authApiClient.get<ProductionHistoryResponse[]>(endpoint);
 
-    console.log('✅ Production history response received');
-    console.log('📊 Response data length:', response.data.length);
-    console.log('📊 Full response:', JSON.stringify(response.data, null, 2));
+    if (__DEV__) console.debug('✅ Production history response received');
+    if (__DEV__) console.debug('📊 Response data length:', response.data.length);
+    if (__DEV__) console.debug('📊 Full response:', JSON.stringify(response.data, null, 2));
 
     if (response.data.length > 0) {
-      console.log('📊 First item Key:', response.data[0].Key);
-      console.log('📊 First item History length:', response.data[0].History?.length || 0);
+      if (__DEV__) console.debug('📊 First item Key:', response.data[0].Key);
+      if (__DEV__) console.debug('📊 First item History length:', response.data[0].History?.length || 0);
       if (response.data[0].History && response.data[0].History.length > 0) {
-        console.log('📊 First history point:', JSON.stringify(response.data[0].History[0]));
+        if (__DEV__) console.debug('📊 First history point:', JSON.stringify(response.data[0].History[0]));
       }
     }
 
     // Transform the response into ProductionPoint[]
     const transformed = transformApiResponse(response.data);
-    console.log('📊 Transformed to', transformed.length, 'production points');
+    if (__DEV__) console.debug('📊 Transformed to', transformed.length, 'production points');
     if (transformed.length > 0) {
-      console.log('📊 First transformed point:', JSON.stringify(transformed[0]));
+      if (__DEV__) console.debug('📊 First transformed point:', JSON.stringify(transformed[0]));
     }
     return transformed;
   } catch (error: any) {
-    console.error('❌ Production history error:', {
+    if (__DEV__) console.debug('❌ Production history error:', {
       message: error.message,
       status: error.response?.status,
       statusText: error.response?.statusText,
@@ -171,11 +171,11 @@ function transformApiResponse(responseData: ProductionHistoryResponse[]): Produc
   // Group by timestamp
   const pointsMap = new Map<string, ProductionPoint>();
 
-  console.log('🔄 Transforming response data, entries:', responseData.length);
+  if (__DEV__) console.debug('🔄 Transforming response data, entries:', responseData.length);
 
   responseData.forEach((modeData, idx) => {
     const mode = modeData.Key.toLowerCase();
-    console.log(
+    if (__DEV__) console.debug(
       `🔄 Processing mode ${idx}: ${mode}, History items:`,
       modeData.History?.length || 0
     );
@@ -189,17 +189,17 @@ function transformApiResponse(responseData: ProductionHistoryResponse[]): Produc
         const firstItem = modeData.History[0];
         if ('Items' in firstItem && Array.isArray(firstItem.Items)) {
           // Nested structure with Items array
-          console.log('🔄 Found nested Items structure');
+          if (__DEV__) console.debug('🔄 Found nested Items structure');
           historyItems = firstItem.Items as HistoryDataPoint[];
         } else if ('DateTime' in firstItem && 'Value' in firstItem) {
           // Direct HistoryDataPoint array
-          console.log('🔄 Found direct HistoryDataPoint array');
+          if (__DEV__) console.debug('🔄 Found direct HistoryDataPoint array');
           historyItems = modeData.History as HistoryDataPoint[];
         }
       }
     }
 
-    console.log(`🔄 Processing ${historyItems.length} history items for ${mode}`);
+    if (__DEV__) console.debug(`🔄 Processing ${historyItems.length} history items for ${mode}`);
 
     historyItems.forEach((dataPoint, dpIdx) => {
       const timestamp = dataPoint.DateTime;
@@ -222,7 +222,7 @@ function transformApiResponse(responseData: ProductionHistoryResponse[]): Produc
       }
 
       if (dpIdx === 0) {
-        console.log(`🔄 First ${mode} point:`, timestamp, 'Value:', dataPoint.Value);
+        if (__DEV__) console.debug(`🔄 First ${mode} point:`, timestamp, 'Value:', dataPoint.Value);
       }
     });
   });
@@ -231,10 +231,10 @@ function transformApiResponse(responseData: ProductionHistoryResponse[]): Produc
   const points = Array.from(pointsMap.values());
   points.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-  console.log('🔄 Final transformed points:', points.length);
+  if (__DEV__) console.debug('🔄 Final transformed points:', points.length);
   if (points.length > 0) {
-    console.log('🔄 First point:', JSON.stringify(points[0]));
-    console.log('🔄 Last point:', JSON.stringify(points[points.length - 1]));
+    if (__DEV__) console.debug('🔄 First point:', JSON.stringify(points[0]));
+    if (__DEV__) console.debug('🔄 Last point:', JSON.stringify(points[points.length - 1]));
   }
 
   return points;

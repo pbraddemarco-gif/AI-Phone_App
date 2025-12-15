@@ -2,7 +2,7 @@
   "expo": {
     "name": "AI Production Monitor",
     "slug": "ai-production-monitor",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "platforms": ["ios", "android", "web"],
     "orientation": "portrait",
@@ -15,7 +15,11 @@
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/c8a91170-3131-42db-ac96-ea600a7a48fd"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
@@ -24,10 +28,20 @@
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Allow the app to capture photos for uploaded actions.",
-        "NSPhotoLibraryUsageDescription": "Allow the app to pick images from your library for uploaded actions.",
-        "NSPhotoLibraryAddUsageDescription": "Allow the app to save captured photos to your library."
-      }
+        "NSCameraUsageDescription": "This app needs access to your camera to capture photos for production action reports and documentation.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to select images for production action reports and documentation.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs permission to save photos you capture for production records.",
+        "NSLocationWhenInUseUsageDescription": "Location access is used to tag production data with facility information.",
+        "CFBundleDevelopmentRegion": "en",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        }
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "requireFullScreen": false,
+      "userInterfaceStyle": "light"
     },
     "android": {
       "adaptiveIcon": {
@@ -35,16 +49,28 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.automationintellect.aiproductionmonitor",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/icon.png"
     },
-    "plugins": ["expo-secure-store", "expo-image-picker"],
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "This app needs access to your photos to select images for production reports.",
+          "cameraPermission": "This app needs camera access to capture photos for production reports."
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "c8a91170-3131-42db-ac96-ea600a7a48fd"
       }
-    }
+    },
+    "owner": "pbraddemarco-gif"
   }
 }

@@ -29,11 +29,11 @@ export function useMachineInventory(
   const [lastFetchedShiftType, setLastFetchedShiftType] = useState<'current' | 'last'>('current');
 
   const fetchData = async (force: boolean = false) => {
-    console.log('🔄 useMachineInventory: fetchData called with customer:', customer);
+    if (__DEV__) console.debug('🔄 useMachineInventory: fetchData called with customer:', customer);
 
     // Don't fetch if we don't have a customer yet or ID is 0 (placeholder)
     if (!customer || !customer.Id || customer.Id === 0) {
-      console.log('⏸️ Skipping fetch - waiting for valid customer');
+      if (__DEV__) console.debug('⏸️ Skipping fetch - waiting for valid customer');
       setMachines([]); // Clear machines
       setLoading(false);
       return;
@@ -46,7 +46,7 @@ export function useMachineInventory(
       lastFetchedShiftType === shiftType &&
       machines.length > 0
     ) {
-      console.log(
+      if (__DEV__) console.debug(
         '⏸️ Skipping fetch - already have machines for customer:',
         customer.Id,
         'shift:',
@@ -59,7 +59,7 @@ export function useMachineInventory(
     setError(null);
 
     try {
-      console.log(
+      if (__DEV__) console.debug(
         '🏭 Fetching machines for plant ID:',
         customer.Id,
         '(' + customer.DisplayName + ')',
@@ -68,7 +68,7 @@ export function useMachineInventory(
       );
 
       const result = await getMachineInventory(customer.Id, shiftType);
-      console.log(
+      if (__DEV__) console.debug(
         '🏭 Machine inventory loaded:',
         result.length,
         'machines for plant:',
@@ -81,14 +81,14 @@ export function useMachineInventory(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch machine inventory';
       setError(errorMessage);
-      console.error('❌ Machine inventory fetch error:', err);
+      if (__DEV__) console.debug('❌ Machine inventory fetch error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log(
+    if (__DEV__) console.debug(
       '🎯 useMachineInventory: useEffect triggered, customer ID:',
       customer?.Id,
       'Name:',

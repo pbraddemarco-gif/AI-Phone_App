@@ -58,7 +58,7 @@ export async function getFaultDowntime(params: FaultDowntimeParams): Promise<Fau
     const res = await authApiClient.get<FaultsApiResponse>(endpoint);
     return res.data.Items || [];
   } catch (e: any) {
-    console.error('Fault downtime fetch error:', e.message);
+    if (__DEV__) console.debug('Fault downtime fetch error:', e.message);
     throw e;
   }
 }

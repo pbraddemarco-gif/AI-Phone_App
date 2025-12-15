@@ -25,7 +25,7 @@ export function useProductionOrders(params: UseProductionOrdersParams) {
 
   const fetchOrders = async (page: number = 1) => {
     if (!clientId || !enabled) {
-      console.log('⏭️ Skipping production orders fetch - clientId:', clientId, 'enabled:', enabled);
+      if (__DEV__) console.debug('⏭️ Skipping production orders fetch - clientId:', clientId, 'enabled:', enabled);
       return;
     }
 
@@ -46,7 +46,7 @@ export function useProductionOrders(params: UseProductionOrdersParams) {
       setCurrentPage(response.CurrentPage);
       setTotalPages(response.TotalPages);
     } catch (err: any) {
-      console.error('Failed to fetch production orders:', err);
+      if (__DEV__) console.debug('Failed to fetch production orders:', err);
       setError(err.message || 'Failed to load production orders');
       setOrders([]);
     } finally {

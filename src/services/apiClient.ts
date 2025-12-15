@@ -1,17 +1,18 @@
 /**
  * Axios API clients with automatic Bearer token injection.
  * In development, route through the local proxy (localhost:3001) to handle CORS and centralize auth.
- * In production, connect directly to upstream servers.
+ * In production, connect directly to upstream servers via HTTPS only.
  */
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { Platform } from 'react-native';
 import { getToken, clearToken } from './tokenStorage';
 import Constants from 'expo-constants';
+import { safeLog } from '../utils/logger';
 
-// Production/Direct endpoints
+// Production/Direct endpoints - MUST be HTTPS
 const PROD_AUTH_BASE_URL = 'https://app.automationintellect.com/api';
-const PROD_DATA_BASE_URL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
+const PROD_DATA_BASE_URL = 'https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
 
 // Get the dev machine IP from Expo's manifest
 // When using tunnel/LAN, Expo provides the hostUri
@@ -27,23 +28,28 @@ const getDevProxyBase = () => {
 
 const devProxyBase = getDevProxyBase();
 
-// Local development proxy endpoints
+// Local development proxy endpoints (HTTP allowed only in dev)
 const DEV_PROXY_AUTH = `${devProxyBase}/api/auth`;
 const DEV_PROXY_DATA = `${devProxyBase}/api/data`;
 
 // Check environment - if using tunnel mode, bypass proxy and use production directly
-const isDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+const isDevelopment = __DEV__;
 const isTunnelMode = Constants.expoConfig?.hostUri?.includes('.exp.direct');
 
 // When using tunnel, bypass proxy and connect directly to production
 const resolvedAuthBase = isDevelopment && !isTunnelMode ? DEV_PROXY_AUTH : PROD_AUTH_BASE_URL;
 const resolvedDataBase = isDevelopment && !isTunnelMode ? DEV_PROXY_DATA : PROD_DATA_BASE_URL;
 
-console.log('[apiClient] Environment:', isDevelopment ? 'development' : 'production');
-console.log('[apiClient] Tunnel mode:', isTunnelMode);
-console.log('[apiClient] Dev proxy base:', devProxyBase);
-console.log('[apiClient] Auth:', resolvedAuthBase);
-console.log('[apiClient] Data:', resolvedDataBase);
+// Security: Log configuration only in development
+if (isDevelopment) {
+  safeLog('info', '[apiClient] Configuration', {
+    environment: isDevelopment ? 'development' : 'production',
+    tunnelMode: isTunnelMode,
+    devProxyBase,
+    authBase: resolvedAuthBase,
+    dataBase: resolvedDataBase,
+  });
+}
 
 /**
  * Main API client (data)
@@ -68,9 +74,6 @@ export const authApiClient: AxiosInstance = axios.create({
   },
 });
 
-console.log('[apiClient] Data baseURL resolved =>', resolvedDataBase);
-console.log('[apiClient] Auth baseURL resolved =>', resolvedAuthBase);
-
 /**
  * Request interceptor: Inject Bearer token into every request
  */
@@ -88,7 +91,7 @@ const tokenInterceptor = async (config: InternalAxiosRequestConfig) => {
 const unauthorizedInterceptor = async (error: AxiosError) => {
   if (error.response?.status === 401) {
     await clearToken();
-    console.warn('Authentication token expired or invalid');
+    if (__DEV__) console.debug('Authentication token expired or invalid');
   }
   return Promise.reject(error);
 };

@@ -40,7 +40,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
   try {
     // Route params available in route.params
   } catch (e) {
-    console.error('❌ Failed to access route params:', e);
+    if (__DEV__) console.debug('❌ Failed to access route params:', e);
   }
   const [shiftView, setShiftView] = useState<'current' | 'last'>('current');
   const [viewMode, setViewMode] = useState<'production' | 'faults'>('production');
@@ -60,7 +60,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
   const partsHourlyGoal = Math.round(route.params?.partsHourlyGoal ?? 0);
 
   // Debug logging for partsHourlyGoal
-  console.log(
+  if (__DEV__) console.debug(
     '🎯 ProductionDashboard received partsHourlyGoal:',
     partsHourlyGoal,
     'from route.params:',
@@ -72,7 +72,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     const fetchShiftSchedules = async () => {
       setShiftLoading(true);
       try {
-        console.log('📅 Fetching shift schedules for machine:', machineId);
+        if (__DEV__) console.debug('📅 Fetching shift schedules for machine:', machineId);
         const [current, previous] = await Promise.all([
           getShiftSchedule(machineId, 'current'),
           getShiftSchedule(machineId, 'previous'),
@@ -84,10 +84,10 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         // Log shift info for debugging
         const currentInfo = extractShiftInfo(current);
         const previousInfo = extractShiftInfo(previous);
-        console.log('📅 Current shift info:', currentInfo);
-        console.log('📅 Previous shift info:', previousInfo);
+        if (__DEV__) console.debug('📅 Current shift info:', currentInfo);
+        if (__DEV__) console.debug('📅 Previous shift info:', previousInfo);
       } catch (error) {
-        console.error('❌ Failed to fetch shift schedules:', error);
+        if (__DEV__) console.debug('❌ Failed to fetch shift schedules:', error);
       } finally {
         setShiftLoading(false);
       }
@@ -107,10 +107,10 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
   const { dims0, productionStart, productionEnd } = useMemo(() => {
     const activeShift = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
 
-    console.log('🔄 Recalculating production time range for shiftView:', shiftView);
+    if (__DEV__) console.debug('🔄 Recalculating production time range for shiftView:', shiftView);
 
     if (!activeShift || !activeShift.Items || activeShift.Items.length === 0) {
-      console.log('⚠️ No shift schedule available, using calendar day fallback');
+      if (__DEV__) console.debug('⚠️ No shift schedule available, using calendar day fallback');
       // Fallback to calendar day if no shift schedule available
       const now = new Date();
       const startOfToday = new Date();
@@ -139,7 +139,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     // Build dims as "TagId;ShiftId" format
     const dimsValue = `${shift.TagId};${shift.Id}`;
 
-    console.log(
+    if (__DEV__) console.debug(
       `📊 Using shift schedule for ${shiftView}: dims=[${dimsValue}], start=${shift.StartDateTime}, end=${shift.EndDateTime}`
     );
 
@@ -241,10 +241,10 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
   // Log production data fetch results
   React.useEffect(() => {
-    console.log('📈 Production data state:', {
+    if (__DEV__) console.debug('📈 Production data state:', {
       loading,
       hasError: !!error,
-      errorMessage: error?.message,
+      errorMessage: error || undefined,
       hasData: !!productionData,
       dataLength: productionData?.length || 0,
       shiftView,
@@ -274,7 +274,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
   // Transform API data to chart format
   const chartData = useMemo(() => {
-    console.log('📊 Chart data transformation:', {
+    if (__DEV__) console.debug('📊 Chart data transformation:', {
       hasData: !!productionData,
       dataLength: productionData?.length || 0,
       shiftView,
@@ -284,18 +284,18 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     });
 
     if (!productionData || productionData.length === 0) {
-      console.log('⚠️ No production data to display');
+      if (__DEV__) console.debug('⚠️ No production data to display');
       return [];
     }
 
-    console.log('📊 First data point:', productionData[0]);
-    console.log('📊 Last data point:', productionData[productionData.length - 1]);
+    if (__DEV__) console.debug('📊 First data point:', productionData[0]);
+    if (__DEV__) console.debug('📊 Last data point:', productionData[productionData.length - 1]);
 
     return productionData.map((point) => {
       try {
         const date = new Date(point.timestamp);
         if (isNaN(date.getTime())) {
-          console.warn('Invalid timestamp in chart data:', point.timestamp);
+          if (__DEV__) console.debug('Invalid timestamp in chart data:', point.timestamp);
           return {
             hour: '00:00',
             goodparts: point.goodParts || 0,
@@ -316,7 +316,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
           goalMinutes: 60,
         };
       } catch (error) {
-        console.error('Error processing chart data point:', error);
+        if (__DEV__) console.debug('Error processing chart data point:', error);
         return {
           hour: '00:00',
           goodparts: 0,
@@ -355,7 +355,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         });
       }
     } catch (error) {
-      console.error('Error formatting table date:', error);
+      if (__DEV__) console.debug('Error formatting table date:', error);
       tableDate = 'Unknown';
     }
 
@@ -381,7 +381,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
           downtime: Math.round(point.downtime || 0),
         };
       } catch (error) {
-        console.error('Error processing table row:', error);
+        if (__DEV__) console.debug('Error processing table row:', error);
         return {
           hour: '00:00',
           timestamp: point.timestamp,
@@ -407,7 +407,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
         return hourSortOrder === 'asc' ? timeA - timeB : timeB - timeA;
       } catch (error) {
-        console.error('Error sorting rows:', error);
+        if (__DEV__) console.debug('Error sorting rows:', error);
         return 0;
       }
     });
@@ -419,7 +419,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     try {
       await authService.logout();
     } catch (e) {
-      console.warn('Logout failed', e);
+      if (__DEV__) console.debug('Logout failed', e);
     }
   };
 
@@ -499,7 +499,11 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
                 : 'Unknown'}
           </Text>
         </View>
-        <TouchableOpacity onPress={refetchStatus}>
+        <TouchableOpacity
+          onPress={() => {
+            void refetchStatus();
+          }}
+        >
           <Text style={[styles.alertClose, { color: '#FFFFFF' }]}>⟳</Text>
         </TouchableOpacity>
       </View>
@@ -512,7 +516,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         const activeSchedule = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
         const shift = activeSchedule?.Items?.[0];
 
-        console.log(
+        if (__DEV__) console.debug(
           '🔍 Dashboard shift display - shiftView:',
           shiftView,
           'has schedule:',
@@ -528,7 +532,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
             // Check if dates are valid
             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-              console.warn('⚠️ Invalid shift dates:', shift.StartDateTime, shift.EndDateTime);
+              if (__DEV__) console.debug('⚠️ Invalid shift dates:', shift.StartDateTime, shift.EndDateTime);
               return null;
             }
 
@@ -542,7 +546,7 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
               });
             };
 
-            console.log(
+            if (__DEV__) console.debug(
               '✅ Dashboard rendering shift times:',
               shift.StartDateTime,
               '→',
@@ -557,11 +561,11 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
               </View>
             );
           } catch (error) {
-            console.error('❌ Error rendering shift times:', error);
+            if (__DEV__) console.debug('❌ Error rendering shift times:', error);
             return null;
           }
         } else {
-          console.log('⚠️ Dashboard no shift schedule to display');
+          if (__DEV__) console.debug('⚠️ Dashboard no shift schedule to display');
           return null;
         }
       })()}
@@ -727,7 +731,9 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
           refreshControl={
             <RefreshControl
               refreshing={loading}
-              onRefresh={refetch}
+              onRefresh={() => {
+                void refetch();
+              }}
               tintColor="#007AFF"
               colors={['#007AFF']}
             />
@@ -768,7 +774,9 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
           refreshControl={
             <RefreshControl
               refreshing={faultsLoading}
-              onRefresh={refetchFaults}
+              onRefresh={() => {
+                void refetchFaults();
+              }}
               tintColor="#007AFF"
               colors={['#007AFF']}
             />

@@ -39,7 +39,7 @@ export function useShiftProductionComparison(
     let isCancelled = false;
 
     const fetchData = async () => {
-      console.log('🔄 useShiftProductionComparison: Starting fetch');
+      if (__DEV__) console.debug('🔄 useShiftProductionComparison: Starting fetch');
       setLoading(true);
       setError(null);
 
@@ -52,14 +52,14 @@ export function useShiftProductionComparison(
 
         if (!isCancelled) {
           setData(result);
-          console.log('✅ useShiftProductionComparison: Data loaded', result.length, 'hours');
+          if (__DEV__) console.debug('✅ useShiftProductionComparison: Data loaded', result.length, 'hours');
         }
       } catch (err) {
         if (!isCancelled) {
           const errorMessage =
             err instanceof Error ? err.message : 'Failed to fetch shift comparison data';
           setError(errorMessage);
-          console.error('❌ useShiftProductionComparison: Error', errorMessage);
+          if (__DEV__) console.debug('❌ useShiftProductionComparison: Error', errorMessage);
         }
       } finally {
         if (!isCancelled) {
@@ -85,7 +85,7 @@ export function useShiftProductionComparison(
 
   // Manual refetch function
   const refetch = () => {
-    console.log('🔄 useShiftProductionComparison: Manual refetch triggered');
+    if (__DEV__) console.debug('🔄 useShiftProductionComparison: Manual refetch triggered');
     setRefetchTrigger((prev) => prev + 1);
   };
 

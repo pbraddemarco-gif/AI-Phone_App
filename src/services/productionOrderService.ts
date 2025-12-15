@@ -32,8 +32,8 @@ export async function getProductionOrders(
     pageNumber = 1,
   } = params;
 
-  console.log('📋 Fetching production orders for client:', clientId);
-  console.log('📅 Date range:', startDate, 'to', endDate);
+  if (__DEV__) console.debug('📋 Fetching production orders for client:', clientId);
+  if (__DEV__) console.debug('📅 Date range:', startDate, 'to', endDate);
 
   try {
     const response = await authApiClient.get<ProductionOrdersResponse>(
@@ -50,13 +50,13 @@ export async function getProductionOrders(
       }
     );
 
-    console.log('✅ Production orders fetched:', response.data.TotalItems, 'total items');
+    if (__DEV__) console.debug('✅ Production orders fetched:', response.data.TotalItems, 'total items');
     return response.data;
   } catch (error: any) {
-    console.error('❌ Production orders error:', error.message);
+    if (__DEV__) console.debug('❌ Production orders error:', error.message);
     if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
+      if (__DEV__) console.debug('Response status:', error.response.status);
+      if (__DEV__) console.debug('Response data:', error.response.data);
     }
     throw new Error(
       error?.response?.data?.Message || error?.message || 'Failed to fetch production orders'

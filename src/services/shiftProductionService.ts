@@ -19,7 +19,7 @@ export async function getShiftComparisonData(params: {
 }): Promise<ShiftHourPoint[]> {
   const { machineId, currentShift, previousShift } = params;
 
-  console.log('📊 Fetching shift comparison data for machine', machineId);
+  if (__DEV__) console.debug('📊 Fetching shift comparison data for machine', machineId);
 
   // Fetch both shifts in parallel
   const [currentData, previousData] = await Promise.all([
@@ -79,7 +79,7 @@ export async function getShiftComparisonData(params: {
     };
   });
 
-  console.log('✅ Built comparison data:', comparisonData.length, 'hours');
+  if (__DEV__) console.debug('✅ Built comparison data:', comparisonData.length, 'hours');
   return comparisonData;
 }
 

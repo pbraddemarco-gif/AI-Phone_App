@@ -164,7 +164,7 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
       const endDate = new Date();
       endDate.setHours(23, 59, 59, 999);
 
-      console.log('🗺️ Fetching plant layout for machine:', machineId);
+      if (__DEV__) console.debug('🗺️ Fetching plant layout for machine:', machineId);
 
       const perf = await getMachinePerformance({
         machineId,
@@ -174,7 +174,7 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
         dims: [], // Don't pass dims for plant layout - we just need the image
       });
 
-      console.log('✅ Plant layout response received');
+      if (__DEV__) console.debug('✅ Plant layout response received');
 
       if (perf.ImageMap) {
         setImageUrl(perf.ImageMap);
@@ -196,7 +196,7 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
               setHotspotBaseSize(null);
             }
           } catch (err) {
-            console.warn('Failed to parse hotspot data:', err);
+            if (__DEV__) console.debug('Failed to parse hotspot data:', err);
             setHotspots([]);
             setHotspotBaseSize(null);
           }
@@ -231,7 +231,7 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
               setHotspotStatuses(statusMap);
             }
           } catch (e) {
-            console.error('Failed to fetch hotspot statuses:', e);
+            if (__DEV__) console.debug('Failed to fetch hotspot statuses:', e);
           }
         }
         // Get image dimensions to determine rotation and initial scale
@@ -277,14 +277,14 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
             scale.setValue(bestFitScale);
           },
           (error) => {
-            console.warn('Failed to get image size:', error);
+            if (__DEV__) console.debug('Failed to get image size:', error);
           }
         );
       } else {
         setError('No plant layout image available');
       }
     } catch (err: any) {
-      console.error('❌ Failed to fetch plant layout:', err);
+      if (__DEV__) console.debug('❌ Failed to fetch plant layout:', err);
 
       // Provide more specific error messages
       if (err?.code === 'ERR_BAD_RESPONSE' && err?.response?.status === 504) {

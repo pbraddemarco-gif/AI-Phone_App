@@ -51,7 +51,7 @@ function parseFieldsFromUIJson(raw: string): ActionTemplateField[] {
     }
     return [];
   } catch (err) {
-    console.error('Failed to parse UIJson', err);
+    if (__DEV__) console.debug('Failed to parse UIJson', err);
     return [];
   }
 }

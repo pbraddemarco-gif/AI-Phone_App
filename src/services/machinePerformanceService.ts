@@ -44,7 +44,7 @@ export async function getMachinePerformance(
     dims = ['50479;2170'],
   } = params;
 
-  console.log(
+  if (__DEV__) console.debug(
     `🏭 Fetching machine performance: /machines/${machineId}/performance?start=${start}&end=${end}`
   );
 
@@ -65,7 +65,7 @@ export async function getMachinePerformance(
     `/machines/${machineId}/performance?${queryParams.toString()}`
   );
 
-  console.log('✅ Machine performance response:', response.data);
+  if (__DEV__) console.debug('✅ Machine performance response:', response.data);
 
   return response.data;
 }

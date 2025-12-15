@@ -17,7 +17,7 @@ export default function ScreenContainer({ children, style, ...rest }: ScreenCont
     try {
       await authService.logout();
     } catch (e) {
-      console.warn('Logout failed', e);
+      if (__DEV__) console.debug('Logout failed', e);
     }
   };
 

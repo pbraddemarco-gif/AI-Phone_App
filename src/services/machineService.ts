@@ -37,7 +37,7 @@ export interface MachinesResponse {
  * @returns Promise resolving to machines response
  */
 export async function getMachines(clientId: number): Promise<MachinesResponse> {
-  console.log('🔧 Fetching machines for client:', clientId);
+  if (__DEV__) console.debug('🔧 Fetching machines for client:', clientId);
 
   try {
     const response = await authApiClient.get<MachinesResponse>(
@@ -49,13 +49,13 @@ export async function getMachines(clientId: number): Promise<MachinesResponse> {
       }
     );
 
-    console.log('✅ Machines fetched:', response.data.TotalItems, 'total items');
+    if (__DEV__) console.debug('✅ Machines fetched:', response.data.TotalItems, 'total items');
     return response.data;
   } catch (error: any) {
-    console.error('❌ Machines fetch error:', error.message);
+    if (__DEV__) console.debug('❌ Machines fetch error:', error.message);
     if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
+      if (__DEV__) console.debug('Response status:', error.response.status);
+      if (__DEV__) console.debug('Response data:', error.response.data);
     }
     throw new Error(error?.response?.data?.Message || error?.message || 'Failed to fetch machines');
   }
