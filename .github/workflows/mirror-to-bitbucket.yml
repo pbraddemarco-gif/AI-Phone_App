@@ -40,14 +40,11 @@ jobs:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          echo "DEBUG: BITBUCKET_REPO is: $BITBUCKET_REPO"
-          echo "DEBUG: Username is set: $([ -n "$BITBUCKET_USERNAME" ] && echo 'yes' || echo 'no')"
-          echo "DEBUG: Password is set: $([ -n "$BITBUCKET_APP_PASSWORD" ] && echo 'yes' || echo 'no')"
-          echo "DEBUG: Constructing URL: https://<username>:<password>@bitbucket.org/$BITBUCKET_REPO.git"
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
-          echo "DEBUG: Remote added successfully"
+          # URL-encode credentials to handle special characters
+          USERNAME_ENCODED=$(node -e "console.log(encodeURIComponent('$BITBUCKET_USERNAME'))")
+          PASSWORD_ENCODED=$(node -e "console.log(encodeURIComponent('$BITBUCKET_APP_PASSWORD'))")
+          git remote add bitbucket https://${USERNAME_ENCODED}:${PASSWORD_ENCODED}@bitbucket.org/$BITBUCKET_REPO.git
 
       - name: Push main and tags
         run: |
-          echo "DEBUG: Attempting to push to bitbucket remote..."
-          git push bitbucket main --tags -v
+          git push bitbucket main --tags
