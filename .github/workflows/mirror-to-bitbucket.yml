@@ -31,20 +31,36 @@ jobs:
 
       - name: Configure git user
         run: |
-          git config user.name "AI Mirror Bot"
-          git config user.email "ai-mirror-bot@users.noreply.github.com"
+          git config --global user.name "AI Mirror Bot"
+          git config --global user.email "ai-mirror-bot@users.noreply.github.com"
 
-      - name: Add Bitbucket remote
+      - name: Clone Bitbucket repository and update subdirectory
         env:
           BITBUCKET_REPO: ${{ vars.BITBUCKET_REPO }}
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+          BITBUCKET_SUBDIR: ${{ vars.BITBUCKET_SUBDIR }}
         run: |
-          # URL-encode credentials to handle special characters
+          # URL-encode credentials
           USERNAME_ENCODED=$(node -e "console.log(encodeURIComponent('$BITBUCKET_USERNAME'))")
           PASSWORD_ENCODED=$(node -e "console.log(encodeURIComponent('$BITBUCKET_APP_PASSWORD'))")
-          git remote add bitbucket https://${USERNAME_ENCODED}:${PASSWORD_ENCODED}@bitbucket.org/$BITBUCKET_REPO.git
-
-      - name: Push main and tags
-        run: |
-          git push bitbucket main --tags
+          
+          # Clone Bitbucket repo
+          git clone https://${USERNAME_ENCODED}:${PASSWORD_ENCODED}@bitbucket.org/$BITBUCKET_REPO.git bitbucket-repo
+          
+          # Remove existing subdirectory contents (keep .git)
+          rm -rf bitbucket-repo/$BITBUCKET_SUBDIR/*
+          rm -rf bitbucket-repo/$BITBUCKET_SUBDIR/.[!.]*
+          
+          # Copy GitHub repo contents to subdirectory (excluding .git)
+          rsync -av --exclude='.git' --exclude='bitbucket-repo' ./ bitbucket-repo/$BITBUCKET_SUBDIR/
+          
+          # Commit and push changes
+          cd bitbucket-repo
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Mirror update from GitHub: ${{ github.sha }}"
+            git push origin master
+          fi
