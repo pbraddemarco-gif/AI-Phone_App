@@ -28,7 +28,8 @@ export function getAppConfig(): AppConfig {
     : 'https://app.automationintellect.com/api';
 
   const apiBaseUrl = isDevelopment
-    ? process.env.EXPO_PUBLIC_API_BASE || 'https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com'
+    ? process.env.EXPO_PUBLIC_API_BASE ||
+      'https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com'
     : 'https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com';
 
   // Security: Validate HTTPS in production

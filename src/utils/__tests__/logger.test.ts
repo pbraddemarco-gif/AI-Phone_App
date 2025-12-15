@@ -11,7 +11,8 @@ describe('Logger Utilities', () => {
 
   describe('sanitizeForLog', () => {
     it('should redact JWT tokens', () => {
-      const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+      const jwt =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
       expect(sanitizeForLog(jwt)).toBe('[REDACTED_JWT]');
     });
 
@@ -32,7 +33,7 @@ describe('Logger Utilities', () => {
       };
 
       const sanitized = sanitizeForLog(data);
-      
+
       expect(sanitized.username).toBe('john');
       expect(sanitized.password).toBe('[REDACTED]');
       expect(sanitized.token).toBe('[REDACTED]');
@@ -50,7 +51,7 @@ describe('Logger Utilities', () => {
       };
 
       const sanitized = sanitizeForLog(data);
-      
+
       expect(sanitized.user.name).toBe('John');
       expect(sanitized.user.secret).toBe('[REDACTED]');
       expect(sanitized.token).toBe('[REDACTED]');
@@ -63,7 +64,7 @@ describe('Logger Utilities', () => {
       ];
 
       const sanitized = sanitizeForLog(data);
-      
+
       expect(sanitized[0].name).toBe('User1');
       expect(sanitized[0].password).toBe('[REDACTED]');
       expect(sanitized[1].password).toBe('[REDACTED]');
@@ -83,9 +84,9 @@ describe('Logger Utilities', () => {
   describe('safeLog', () => {
     it('should sanitize data before logging', () => {
       const consoleSpy = jest.spyOn(console, 'log');
-      
+
       safeLog('info', 'Test message', { password: 'secret' });
-      
+
       // Verify password was redacted
       const loggedData = consoleSpy.mock.calls[0][1];
       expect(loggedData.password).toBe('[REDACTED]');

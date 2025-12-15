@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - iOS App Store Release Candidate
 
 #### Security Hardening
+
 - ✅ Enforced HTTPS for all production endpoints
 - ✅ Implemented safe logging utilities (`src/utils/logger.ts`)
   - Automatic redaction of tokens, passwords, and sensitive data
@@ -32,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Excluded service account files
 
 #### iOS App Store Readiness
+
 - ✅ Updated app version to 1.0.0 (App Store ready)
 - ✅ Enhanced app.json with production-ready iOS configuration
   - Detailed permission descriptions
@@ -49,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Created comprehensive iOS release guide (`IOS_RELEASE_GUIDE.md`)
 
 #### CI/CD Pipeline
+
 - ✅ Added GitHub Actions workflows
   - CI workflow: lint, typecheck, security scans on PRs
   - Release workflow: automated builds and App Store submission
@@ -56,12 +59,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Created CI/CD setup documentation (`CI_CD_SETUP.md`)
 
 #### Testing Infrastructure
+
 - ✅ Added Jest configuration
 - ✅ Created test utilities and examples
 - ✅ Documented testing strategy (`TESTING.md`)
 - ✅ Added test scripts to package.json
 
 #### Documentation
+
 - ✅ Comprehensive README with quick start, architecture, and troubleshooting
 - ✅ Security documentation (`SECURITY.md`)
 - ✅ iOS release guide (`IOS_RELEASE_GUIDE.md`)
@@ -70,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Environment variable example (`.env.example`)
 
 #### Code Quality
+
 - ✅ Removed sensitive token logging from production code
 - ✅ Added safe logging throughout codebase
 - ✅ Improved error messages and user feedback
@@ -77,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Created reusable utility modules
 
 ### Changed
+
 - Updated package.json version from 0.1.0 to 1.0.0
 - Updated app.json version from 0.1.0 to 1.0.0
 - Improved apiClient.ts with environment-aware configuration
@@ -84,12 +91,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated permission descriptions for better App Store compliance
 
 ### Fixed
+
 - Changed HTTP production endpoint to HTTPS (security requirement)
 - Removed token logging that exposed sensitive data
 - Fixed environment variable handling for production builds
 - Corrected EAS configuration for proper production builds
 
 ### Security
+
 - All production traffic now uses HTTPS/TLS
 - Tokens stored in iOS Keychain (secure)
 - No secrets in repository
@@ -100,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Release Checklist Status
 
 ### ✅ Ready for TestFlight
+
 - [x] App builds successfully
 - [x] No TypeScript errors
 - [x] No linting errors
@@ -110,6 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [x] App Store metadata ready
 
 ### 🔄 Pre-App Store (Manual Testing Required)
+
 - [ ] Full manual testing on TestFlight
 - [ ] Test on multiple iOS devices
 - [ ] Test all authentication flows
@@ -135,10 +146,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Breaking Changes**: None - this is the first production release
 
 **Environment Variables**:
+
 - Production builds now automatically use HTTPS endpoints
 - Development proxy still supported via environment variables
 
 **New Features**:
+
 - Safe logging utilities available for import
 - Input validation utilities available for import
 - Enhanced error handling in authentication
@@ -146,6 +159,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Next Release Preview (v1.1.0)
 
 Planned features:
+
 - [ ] Full Jest test coverage
 - [ ] Detox E2E tests
 - [ ] Android Play Store release
@@ -157,6 +171,7 @@ Planned features:
 ---
 
 For detailed technical changes, see git commit history:
+
 ```bash
 git log v0.1.0..v1.0.0 --oneline
 ```

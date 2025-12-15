@@ -16,13 +16,6 @@
     "types": ["react", "react-native", "node"]
   },
   "include": ["App.tsx", "src"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    "**/__tests__",
-    "**/*.test.ts",
-    "**/*.test.tsx"
-  ],
+  "exclude": ["node_modules", "dist", "build", "**/__tests__", "**/*.test.ts", "**/*.test.tsx"],
   "extends": "expo/tsconfig.base"
 }

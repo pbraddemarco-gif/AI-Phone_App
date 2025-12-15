@@ -142,20 +142,20 @@ class AuthService {
       return data;
     } catch (err) {
       safeLog('error', 'Login failed', { error: err instanceof Error ? err.message : 'Unknown' });
-      
+
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
         const payload: any = err.response?.data;
-        
+
         // Don't log full error payload in production (may contain sensitive info)
         if (__DEV__) {
           console.error('Status:', status);
           console.error('Payload:', payload);
         }
-        
+
         // Provide user-friendly error messages without leaking details
         let message = 'Login failed. Please check your credentials.';
-        
+
         if (status === 401 || status === 403) {
           message = 'Invalid username or password';
         } else if (status === 429) {
@@ -165,12 +165,12 @@ class AuthService {
         } else if (!status) {
           message = 'Network error. Please check your connection.';
         }
-        
+
         // In development, allow server error messages through
         if (__DEV__ && (payload?.error_description || payload?.error)) {
           message = payload.error_description || payload.error || message;
         }
-        
+
         throw new Error(message);
       }
       if (err instanceof Error) throw err;

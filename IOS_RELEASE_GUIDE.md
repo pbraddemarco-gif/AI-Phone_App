@@ -3,12 +3,14 @@
 ## Prerequisites
 
 ### Required Accounts & Access
+
 - ✅ Apple Developer Account (Team ID: `K7RD3CHTQ7`)
 - ✅ EAS Account with project access
 - ✅ App Store Connect access (App ID: `6756504159`)
 - ✅ Git repository access
 
 ### Required Tools
+
 ```bash
 npm install -g eas-cli
 eas login
@@ -16,10 +18,10 @@ eas whoami  # Verify authentication
 ```
 
 ### Apple Developer Setup
+
 1. **Certificates & Provisioning**
    - EAS automatically manages certificates and profiles
    - Ensure you have "Admin" or "App Manager" role in Apple Developer account
-   
 2. **App Store Connect**
    - App already registered: `com.automationintellect.aiproductionmonitor`
    - App ID: `6756504159`
@@ -29,27 +31,33 @@ eas whoami  # Verify authentication
 ## Build Profiles
 
 ### Development
+
 ```bash
 eas build --profile development --platform ios
 ```
+
 - Development client
 - Internal distribution
 - Simulator support
 - Uses dev proxy endpoints
 
 ### Preview (TestFlight Internal)
+
 ```bash
 eas build --profile preview --platform ios
 ```
+
 - Release build configuration
 - Internal distribution
 - Device only (no simulator)
 - Production HTTPS endpoints
 
 ### Production (App Store)
+
 ```bash
 eas build --profile production --platform ios
 ```
+
 - Release build
 - App Store distribution
 - Auto-increments build number
@@ -63,6 +71,7 @@ eas build --profile production --platform ios
 ### Step 1: Pre-Release Checklist
 
 **Code Quality**
+
 - [ ] All TypeScript errors fixed: `npm run typecheck`
 - [ ] All linting errors fixed: `npm run lint`
 - [ ] All tests passing (once implemented)
@@ -70,12 +79,14 @@ eas build --profile production --platform ios
 - [ ] Environment variables set for production
 
 **Version Management**
+
 - [ ] Update version in `app.json` (currently `1.0.0`)
 - [ ] Update version in `package.json` (currently `1.0.0`)
 - [ ] Build number auto-increments via EAS
 - [ ] Update `CHANGELOG.md` with release notes
 
 **iOS-Specific**
+
 - [ ] App icon (1024x1024) in `assets/icon.png`
 - [ ] Splash screen in `assets/splash.png`
 - [ ] Privacy manifest reviewed: `PrivacyInfo.xcprivacy`
@@ -83,6 +94,7 @@ eas build --profile production --platform ios
 - [ ] Bundle ID correct: `com.automationintellect.aiproductionmonitor`
 
 **Security**
+
 - [ ] All endpoints use HTTPS
 - [ ] No secrets in repository
 - [ ] Tokens stored in SecureStore
@@ -106,6 +118,7 @@ eas build --profile production --platform ios
 ```
 
 **Build Process:**
+
 1. EAS uploads source to cloud build servers
 2. Installs dependencies in clean environment
 3. Generates native iOS project
@@ -114,6 +127,7 @@ eas build --profile production --platform ios
 6. Returns `.ipa` file
 
 **Monitor Build:**
+
 - View progress: https://expo.dev/accounts/pbraddemarco-gif/projects/ai-production-monitor/builds
 - Receive email notification on completion
 - Typical build time: 10-15 minutes
@@ -121,22 +135,26 @@ eas build --profile production --platform ios
 ### Step 3: Submit to TestFlight
 
 **Automatic Submission (Recommended):**
+
 ```bash
 eas submit --platform ios --latest
 ```
 
 EAS will:
+
 - Download latest successful build
 - Upload to App Store Connect
 - Submit for App Review (beta)
 
 **Manual Submission:**
+
 1. Download `.ipa` from EAS dashboard
 2. Open Xcode → Window → Transporter
 3. Add `.ipa` file
 4. Click "Deliver"
 
 **TestFlight Review:**
+
 - Apple reviews for TestFlight (1-2 days)
 - Internal testers can test immediately
 - External testers need App Review approval
@@ -144,17 +162,20 @@ EAS will:
 ### Step 4: TestFlight Testing
 
 **Internal Testing (up to 100 testers):**
+
 - No App Review required
 - Instant access after build upload
 - Use TestFlight app on iOS device
 - Testers need Apple ID invited in App Store Connect
 
 **External Testing (unlimited):**
+
 - Requires App Review
 - Public link available
 - Use for broader beta testing
 
 **Test Checklist:**
+
 - [ ] App launches successfully
 - [ ] Login works with production credentials
 - [ ] All screens accessible
@@ -167,6 +188,7 @@ EAS will:
 ### Step 5: Submit to App Store
 
 **In App Store Connect:**
+
 1. Go to https://appstoreconnect.apple.com
 2. Select "AI Production Monitor"
 3. Click "+ Version or Platform" → "iOS"
@@ -187,18 +209,21 @@ EAS will:
 8. Click "Submit for Review"
 
 **Review Time:**
+
 - Typical: 24-48 hours
 - Can be expedited for critical bugs
 
 ### Step 6: Release Management
 
 **Phased Release (Recommended):**
+
 - Enable in App Store Connect
 - Gradual rollout over 7 days
 - Monitor for issues
 - Can pause/cancel if problems arise
 
 **Immediate Release:**
+
 - Available to all users instantly
 - Higher risk if bugs present
 
@@ -207,16 +232,19 @@ EAS will:
 ## Version Management Strategy
 
 ### Semantic Versioning
+
 - **Major** (1.x.x): Breaking changes, major new features
 - **Minor** (x.1.x): New features, backwards compatible
 - **Patch** (x.x.1): Bug fixes, minor improvements
 
 ### Build Numbers
+
 - Managed automatically by EAS (`autoIncrement: true`)
 - Increments on each production build
 - Never reuse build numbers
 
 ### Version Update Process
+
 1. Update `app.json` → `expo.version`
 2. Update `package.json` → `version`
 3. Commit changes
@@ -229,6 +257,7 @@ EAS will:
 ## Troubleshooting
 
 ### Build Fails
+
 ```bash
 # Check build logs in EAS dashboard
 # Common issues:
@@ -243,19 +272,23 @@ npx expo-doctor
 ```
 
 ### Submission Fails
+
 - Check Apple Developer account status
 - Verify certificates not expired
 - Ensure App ID matches Bundle ID
 - Check EAS credentials: `eas credentials`
 
 ### App Rejected by Review
+
 Common rejection reasons:
+
 1. **Crash on launch** - Test thoroughly on TestFlight
 2. **Missing features** - Demo account must show full functionality
 3. **Privacy violations** - Ensure privacy manifest accurate
 4. **Guideline violations** - Follow Apple Human Interface Guidelines
 
 ### Certificate Issues
+
 ```bash
 # View current credentials
 eas credentials
@@ -270,6 +303,7 @@ eas credentials --platform ios
 ## Environment Variables in Production
 
 Production builds automatically use HTTPS endpoints (configured in `eas.json`):
+
 - `EXPO_PUBLIC_API_BASE`: `https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com`
 - `EXPO_PUBLIC_AUTH_BASE`: `https://app.automationintellect.com/api`
 
@@ -280,6 +314,7 @@ Production builds automatically use HTTPS endpoints (configured in `eas.json`):
 ## Testing Production Build Locally
 
 ### iOS Simulator (Preview Build)
+
 ```bash
 # Build for simulator
 eas build --profile preview --platform ios --local
@@ -289,6 +324,7 @@ xcrun simctl install booted <path-to-ipa>
 ```
 
 ### iOS Device (TestFlight)
+
 1. Build with `--profile production`
 2. Submit to TestFlight
 3. Install via TestFlight app
@@ -299,12 +335,15 @@ xcrun simctl install booted <path-to-ipa>
 ## Post-Release
 
 ### Monitor Crashes
+
 - Use Xcode Organizer for crash logs
 - Check App Store Connect → Analytics
 - Consider adding crash reporting (Sentry, BugSnag)
 
 ### Update Checklist
+
 When releasing updates:
+
 1. Increment version in `app.json` and `package.json`
 2. Update App Store screenshots if UI changed
 3. Write release notes in App Store Connect

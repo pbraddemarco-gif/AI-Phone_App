@@ -9,23 +9,27 @@ This repository uses GitHub Actions for continuous integration and deployment to
 ### 1. CI Workflow (`.github/workflows/ci.yml`)
 
 **Triggers:**
+
 - Pull requests to `main`, `develop`, or `release/**` branches
 - Pushes to `main` branch
 
 **Jobs:**
 
 #### `lint-and-typecheck`
+
 - Runs TypeScript type checking
 - Runs ESLint
 - Checks for console.log statements in source
 - **Fails fast** if any issues found
 
 #### `security-check`
+
 - Scans for potential secrets in code
 - Checks for insecure HTTP URLs
 - Runs npm audit for vulnerable dependencies
 
 #### `build-preview`
+
 - Builds iOS preview for TestFlight
 - Only runs on `main` branch or when PR labeled with `build-ios`
 - Posts build status comment on PR
@@ -33,10 +37,12 @@ This repository uses GitHub Actions for continuous integration and deployment to
 ### 2. Release Workflow (`.github/workflows/release.yml`)
 
 **Triggers:**
+
 - Git tags matching `v*.*.*` (e.g., `v1.0.0`)
 - Manual workflow dispatch
 
 **Jobs:**
+
 - Type check and lint
 - Build iOS production
 - Submit to App Store Connect
@@ -49,9 +55,11 @@ This repository uses GitHub Actions for continuous integration and deployment to
 Configure these in repository settings → Secrets and variables → Actions:
 
 #### `EXPO_TOKEN` (Required)
+
 Expo authentication token for EAS CLI.
 
 **How to get:**
+
 ```bash
 eas login
 eas whoami  # Verify you're logged in
@@ -59,13 +67,16 @@ eas whoami  # Verify you're logged in
 ```
 
 **Set in GitHub:**
+
 1. Go to repository Settings → Secrets → Actions
 2. Click "New repository secret"
 3. Name: `EXPO_TOKEN`
 4. Value: (paste token)
 
 #### Apple Developer Credentials
+
 Managed by EAS - no GitHub secrets needed. Configured via:
+
 ```bash
 eas credentials
 ```
@@ -75,6 +86,7 @@ eas credentials
 ### Running CI on Pull Requests
 
 CI automatically runs on every PR. To pass:
+
 ```bash
 # Locally verify before pushing
 npm run typecheck
@@ -118,6 +130,7 @@ Go to Actions → Release Build → Run workflow → Select branch → Run
 ### Environment Variables
 
 Set in `eas.json` under each profile:
+
 ```json
 "env": {
   "EXPO_PUBLIC_API_BASE": "https://...",
@@ -128,23 +141,28 @@ Set in `eas.json` under each profile:
 ## Monitoring Builds
 
 ### EAS Dashboard
+
 https://expo.dev/accounts/pbraddemarco-gif/projects/ai-production-monitor/builds
 
 ### GitHub Actions
+
 https://github.com/pbraddemarco-gif/AI-Phone_App/actions
 
 ### App Store Connect
+
 https://appstoreconnect.apple.com
 
 ## Troubleshooting
 
 ### CI Fails with "Type error"
+
 ```bash
 # Run locally to see full error
 npm run typecheck
 ```
 
 ### CI Fails with "Lint error"
+
 ```bash
 # Auto-fix many issues
 npm run lint:fix
@@ -154,15 +172,19 @@ npm run lint
 ```
 
 ### Build Fails in EAS
+
 Check EAS dashboard for logs. Common issues:
+
 - Dependencies not resolving: Check `package.json`
 - Certificate expired: Run `eas credentials`
 - Build timeout: Increase `resourceClass` in eas.json
 
 ### "EXPO_TOKEN not set"
+
 Ensure `EXPO_TOKEN` secret is configured in GitHub repository settings.
 
 ### Build succeeds but not appearing in TestFlight
+
 - Check App Store Connect for processing status
 - Builds take 10-15 minutes to process
 - Check for App Store Connect email notifications
@@ -170,6 +192,7 @@ Ensure `EXPO_TOKEN` secret is configured in GitHub repository settings.
 ## Best Practices
 
 ### Before Merging PR
+
 - [ ] CI passes (green checkmark)
 - [ ] Code reviewed
 - [ ] Tested locally
@@ -177,6 +200,7 @@ Ensure `EXPO_TOKEN` secret is configured in GitHub repository settings.
 - [ ] Version bumped if needed
 
 ### Before Creating Release
+
 - [ ] All features tested on TestFlight
 - [ ] Version updated in app.json and package.json
 - [ ] CHANGELOG.md updated
@@ -184,6 +208,7 @@ Ensure `EXPO_TOKEN` secret is configured in GitHub repository settings.
 - [ ] App Store metadata reviewed
 
 ### After Release
+
 - [ ] Monitor crash reports in Xcode Organizer
 - [ ] Check App Store Connect analytics
 - [ ] Verify external TestFlight testers receive build
@@ -192,12 +217,14 @@ Ensure `EXPO_TOKEN` secret is configured in GitHub repository settings.
 ## Security
 
 ### Secrets Management
+
 - Never commit secrets to repository
 - Use GitHub Secrets for CI/CD credentials
 - Rotate tokens if exposed
 - Use EAS Secrets for build-time secrets (if needed)
 
 ### Access Control
+
 - Limit GitHub Actions write access
 - Restrict EAS project access
 - Use branch protection rules on `main`
@@ -205,11 +232,13 @@ Ensure `EXPO_TOKEN` secret is configured in GitHub repository settings.
 ## Performance
 
 ### Build Times
+
 - Lint/Typecheck: ~2 minutes
 - iOS Preview Build: ~10-15 minutes
 - iOS Production Build: ~15-20 minutes
 
 ### Optimization
+
 - Use `npm ci` instead of `npm install`
 - Cache node_modules with `actions/cache`
 - Use appropriate EAS resource class
@@ -227,6 +256,7 @@ Ensure `EXPO_TOKEN` secret is configured in GitHub repository settings.
 ## Support
 
 For issues with:
+
 - **GitHub Actions**: Check workflow logs, GitHub Actions documentation
 - **EAS Builds**: Check EAS dashboard, Expo documentation
 - **App Store**: Check App Store Connect, Apple Developer documentation

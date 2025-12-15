@@ -1,6 +1,6 @@
 /**
  * Safe logging utility - prevents accidental PII/token leakage in production
- * 
+ *
  * Usage:
  *   import { safeLog, sanitizeForLog } from '@/utils/logger';
  *   safeLog('debug', 'User action', { userId: user.id }); // Logged only in dev
@@ -24,7 +24,7 @@ export function safeLog(level: LogLevel, message: string, data?: any): void {
   }
 
   const sanitized = data ? sanitizeForLog(data) : undefined;
-  
+
   switch (level) {
     case 'debug':
       console.debug(`[DEBUG] ${message}`, sanitized);
@@ -69,7 +69,7 @@ export function sanitizeForLog(data: any): any {
   }
 
   if (Array.isArray(data)) {
-    return data.map(item => sanitizeForLog(item));
+    return data.map((item) => sanitizeForLog(item));
   }
 
   // Redact known sensitive keys
@@ -91,8 +91,8 @@ export function sanitizeForLog(data: any): any {
   const sanitized: any = {};
   for (const [key, value] of Object.entries(data)) {
     const lowerKey = key.toLowerCase();
-    const isSensitive = sensitiveKeys.some(sk => lowerKey.includes(sk.toLowerCase()));
-    
+    const isSensitive = sensitiveKeys.some((sk) => lowerKey.includes(sk.toLowerCase()));
+
     if (isSensitive) {
       sanitized[key] = '[REDACTED]';
     } else {

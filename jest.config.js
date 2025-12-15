@@ -23,10 +23,7 @@ module.exports = {
       lines: 40,
     },
   },
-  testMatch: [
-    '**/__tests__/**/*.test.{ts,tsx}',
-    '**/?(*.)+(spec|test).{ts,tsx}',
-  ],
+  testMatch: ['**/__tests__/**/*.test.{ts,tsx}', '**/?(*.)+(spec|test).{ts,tsx}'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   globals: {
     __DEV__: true,

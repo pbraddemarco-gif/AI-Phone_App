@@ -96,7 +96,7 @@ export function sanitizeFilename(filename: string): string {
  */
 export function isValidJWTFormat(token: string): boolean {
   const parts = token.split('.');
-  return parts.length === 3 && parts.every(part => part.length > 0);
+  return parts.length === 3 && parts.every((part) => part.length > 0);
 }
 
 /**

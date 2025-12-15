@@ -3,12 +3,15 @@
 ## Current Status
 
 ### Unit Tests (Partially Implemented)
+
 Due to Expo SDK 54's "winter" runtime requirements, full Jest integration tests require additional configuration. Test files have been created in:
+
 - `src/utils/__tests__/validation.test.ts`
 - `src/utils/__tests__/logger.test.ts`
 - `src/services/__tests__/tokenStorage.test.ts`
 
 **Resolution for App Store Release:**
+
 - TypeScript compilation + lint checks provide basic correctness validation
 - Manual testing on TestFlight provides functional validation
 - Post-launch: Configure jest-expo with proper Expo modules mocking
@@ -16,12 +19,14 @@ Due to Expo SDK 54's "winter" runtime requirements, full Jest integration tests 
 ### Quality Assurance for Release
 
 **Pre-Build Checks (Automated):**
+
 ```bash
 npm run typecheck   # TypeScript validation
 npm run lint        # ESLint code quality
 ```
 
 **Manual Testing Checklist:**
+
 1. **Authentication Flow**
    - [ ] Login with valid credentials
    - [ ] Login with invalid credentials (proper error)
@@ -54,6 +59,7 @@ npm run lint        # ESLint code quality
 ## Testing Commands
 
 ### Static Analysis
+
 ```bash
 # Type checking (catches ~80% of bugs)
 npm run typecheck
@@ -66,6 +72,7 @@ npm run lint:fix
 ```
 
 ### Build Validation
+
 ```bash
 # Development build
 eas build --profile development --platform ios
@@ -75,6 +82,7 @@ eas build --profile production --platform ios
 ```
 
 ### Runtime Testing
+
 ```bash
 # Local development
 npm run start
@@ -86,6 +94,7 @@ npm run dev
 ## Future Testing Improvements
 
 ### Post-Launch Priorities
+
 1. **Fix Jest Configuration**
    - Configure jest-expo for SDK 54
    - Mock Expo modules properly
@@ -106,6 +115,7 @@ npm run dev
    - Ensure UI consistency
 
 ### Recommended Tools
+
 - **Detox**: E2E testing for React Native
 - **React Native Testing Library**: Component testing
 - **MSW (Mock Service Worker)**: API mocking
@@ -115,6 +125,7 @@ npm run dev
 
 Current: ~0% (manual testing only)
 Target Post-Launch:
+
 - Unit tests: 60%+ coverage
 - Integration tests: Critical paths
 - E2E tests: Happy path + error scenarios
@@ -122,6 +133,7 @@ Target Post-Launch:
 ## CI/CD Testing
 
 GitHub Actions workflow (see `.github/workflows/ci.yml`) runs:
+
 - `npm run typecheck`
 - `npm run lint`
 - (Future) `npm test`

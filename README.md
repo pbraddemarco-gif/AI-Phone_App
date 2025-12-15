@@ -78,6 +78,7 @@ npm run dev
 ### Environment Setup
 
 **Development with Local Proxy:**
+
 ```bash
 # Start proxy + Metro bundler
 npm run dev
@@ -93,6 +94,7 @@ npm start
 ```
 
 **Expo Go (Mobile Testing):**
+
 ```bash
 npm start
 # Scan QR code with Expo Go app
@@ -198,17 +200,18 @@ git push origin v1.0.1
 
 ### Build Profiles
 
-| Profile | Use Case | Distribution | Endpoints |
-|---------|----------|--------------|-----------|
-| `development` | Local dev | Internal | Dev proxy |
-| `preview` | TestFlight testing | Internal | Production HTTPS |
-| `production` | App Store | Store | Production HTTPS |
+| Profile       | Use Case           | Distribution | Endpoints        |
+| ------------- | ------------------ | ------------ | ---------------- |
+| `development` | Local dev          | Internal     | Dev proxy        |
+| `preview`     | TestFlight testing | Internal     | Production HTTPS |
+| `production`  | App Store          | Store        | Production HTTPS |
 
 ### EAS Build Configuration
 
 See [eas.json](eas.json) for detailed configuration.
 
 **Key Settings:**
+
 - Bundle ID: `com.automationintellect.aiproductionmonitor`
 - Apple Team ID: `K7RD3CHTQ7`
 - App Store ID: `6756504159`
@@ -247,16 +250,19 @@ Auto-inject Bearer token (Axios interceptor)
 ### API Architecture
 
 **Development Mode:**
+
 ```
 App → Local Proxy (localhost:3001) → Upstream APIs
 ```
 
 **Production Mode:**
+
 ```
 App → HTTPS APIs directly
 ```
 
 **Endpoints:**
+
 - Auth: `https://app.automationintellect.com/api`
 - Data: `https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com`
 
@@ -273,14 +279,14 @@ App → HTTPS APIs directly
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md) | Complete iOS App Store submission guide |
-| [SECURITY.md](SECURITY.md) | Security hardening and best practices |
-| [CI_CD_SETUP.md](CI_CD_SETUP.md) | GitHub Actions and EAS Build setup |
-| [TESTING.md](TESTING.md) | Testing strategy and manual test checklists |
-| [BUILD_GUIDE.md](BUILD_GUIDE.md) | Detailed build instructions |
-| [STARTUP_GUIDE.md](STARTUP_GUIDE.md) | Development environment setup |
+| Document                                     | Description                                 |
+| -------------------------------------------- | ------------------------------------------- |
+| [IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md) | Complete iOS App Store submission guide     |
+| [SECURITY.md](SECURITY.md)                   | Security hardening and best practices       |
+| [CI_CD_SETUP.md](CI_CD_SETUP.md)             | GitHub Actions and EAS Build setup          |
+| [TESTING.md](TESTING.md)                     | Testing strategy and manual test checklists |
+| [BUILD_GUIDE.md](BUILD_GUIDE.md)             | Detailed build instructions                 |
+| [STARTUP_GUIDE.md](STARTUP_GUIDE.md)         | Development environment setup               |
 
 ## Contributing
 
@@ -320,16 +326,19 @@ style: Code formatting
 ### Development Issues
 
 **"Network request failed" on login**
+
 - Ensure development proxy is running: `npm run proxy`
 - Check proxy health: http://localhost:3001/health
 - Verify environment variables are set
 
 **TypeScript errors**
+
 ```bash
 npm run typecheck  # See full error list
 ```
 
 **Metro bundler issues**
+
 ```bash
 # Clear cache and restart
 npm run dev:reset
@@ -340,12 +349,14 @@ npx expo start --clear
 ### Build Issues
 
 **EAS build fails**
+
 1. Check build logs in EAS dashboard
 2. Verify `eas.json` configuration
 3. Run `eas credentials` to check certificates
 4. Ensure `npm run typecheck` and `npm run lint` pass locally
 
 **App rejected by Apple**
+
 - Review rejection reason in App Store Connect
 - See [IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md) troubleshooting section
 - Test thoroughly on TestFlight before submitting
@@ -367,7 +378,6 @@ Proprietary - Automation Intellect © 2025
 **Current Version**: 1.0.0  
 **Last Updated**: December 15, 2025  
 **Maintainer**: Brad DeMarco (brad.demarco@automationintellect.com)
-
 
 ## API Client
 
