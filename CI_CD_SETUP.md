@@ -48,6 +48,57 @@ This repository uses GitHub Actions for continuous integration and deployment to
 - Submit to App Store Connect
 - Create GitHub release
 
+## AWS Proxy Deployment (Elastic Beanstalk)
+
+Use the scaffold in `proxy-aws/` to deploy a minimal reverse proxy for customer-facing integrations.
+
+### Minimal Requirements
+- Node.js platform (Node 18) on Elastic Beanstalk
+- Single-instance environment (t2.micro/t3.micro), autoscaling min=1
+- ACM certificate attached to the load balancer
+- Route 53 DNS pointing to the EB load balancer
+- CloudWatch Logs enabled; health check path `/health`
+
+### Deploy Steps
+1. Zip the contents of `proxy-aws/` and upload to EB as a new application version.
+2. Configure environment variables:
+  - `API_DATA_TARGET`: upstream data API (Elastic Beanstalk URL)
+  - `API_AUTH_TARGET`: upstream auth API (e.g., https://app.automationintellect.com/api)
+  - `API_PLANT_TARGET`: upstream plant API
+  - `CORS_ALLOW_ORIGINS`: comma-separated allowed origins (e.g., https://yourapp.example.com)
+  - `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` (optional)
+3. Attach ACM certificate and enforce HTTPS (Nginx redirect file provided in `.ebextensions/01-nginx-https.config`).
+4. Validate `/health` returns 200, and test proxied paths `/api/data`, `/api/auth`, `/api/plant`.
+5. Enable CloudWatch alarms for 5xx error rate and latency.
+
+### Security Notes
+- Strict CORS; avoid `*` in production.
+- Rate limiting via `express-rate-limit`.
+- Security headers via `helmet`.
+- Consider AWS WAF managed rules on the load balancer.
+
+## Bitbucket Mirroring
+
+We mirror GitHub changes to Bitbucket to keep downstream consumers in sync.
+
+### Options
+- Set up repository mirroring (GitHub → Bitbucket) using Bitbucket’s mirror feature or GitHub Actions.
+- Alternatively, push to both remotes manually or via CI.
+
+### Setup Instructions
+1. Add Bitbucket remote locally:
+  - `git remote add bitbucket https://bitbucket.org/<workspace>/<repo>.git`
+2. Update CI pipeline to push on successful `main` merges:
+  - Use a GitHub Action with a PAT to run `git push bitbucket main --tags`.
+3. Validate: `git remote -v` shows both `origin` (GitHub) and `bitbucket` (Bitbucket).
+4. Document any credential storage (GitHub Secrets for PAT, Bitbucket app passwords).
+
+### Checklist
+- Release branch merged to `main` on GitHub.
+- CI runs succeed; artifacts built.
+- Mirroring job pushes to Bitbucket `main` and tags.
+- Proxy deployment instructions shared with customer (URL, rate limits, health path).
+
 ## Setup Requirements
 
 ### GitHub Secrets
