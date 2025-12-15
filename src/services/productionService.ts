@@ -11,7 +11,7 @@ import {
   Notification,
 } from '../types/api';
 
-const API_BASE_URL = 'http://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com/api';
+const API_BASE_URL = 'https://lowcost-env.upd2vnf6k6.us-west-2.elasticbeanstalk.com/api';
 
 class ProductionService {
   private async getAuthHeaders(): Promise<{ [key: string]: string }> {

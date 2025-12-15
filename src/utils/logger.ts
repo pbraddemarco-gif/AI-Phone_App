@@ -4,7 +4,7 @@
  * Usage:
  *   import { safeLog, sanitizeForLog } from '@/utils/logger';
  *   safeLog('debug', 'User action', { userId: user.id }); // Logged only in dev
- *   console.log('Token:', sanitizeForLog(token)); // Always redacts tokens
+ *   console.debug('Token:', sanitizeForLog(token)); // Always redacts tokens
  */
 
 const isDevelopment = __DEV__;
@@ -30,7 +30,7 @@ export function safeLog(level: LogLevel, message: string, data?: any): void {
       console.debug(`[DEBUG] ${message}`, sanitized);
       break;
     case 'info':
-      console.log(`[INFO] ${message}`, sanitized);
+      console.debug(`[INFO] ${message}`, sanitized);
       break;
     case 'warn':
       console.warn(`[WARN] ${message}`, sanitized);
@@ -108,7 +108,7 @@ export function sanitizeForLog(data: any): any {
  */
 export function devLog(message: string, ...args: any[]): void {
   if (isDevelopment) {
-    console.log(message, ...args.map(sanitizeForLog));
+    console.debug(message, ...args.map(sanitizeForLog));
   }
 }
 
