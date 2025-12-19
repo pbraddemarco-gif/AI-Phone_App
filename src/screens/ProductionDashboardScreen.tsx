@@ -60,12 +60,13 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
   const partsHourlyGoal = Math.round(route.params?.partsHourlyGoal ?? 0);
 
   // Debug logging for partsHourlyGoal
-  if (__DEV__) console.debug(
-    '🎯 ProductionDashboard received partsHourlyGoal:',
-    partsHourlyGoal,
-    'from route.params:',
-    route.params
-  );
+  if (__DEV__)
+    console.debug(
+      '🎯 ProductionDashboard received partsHourlyGoal:',
+      partsHourlyGoal,
+      'from route.params:',
+      route.params
+    );
 
   // Fetch shift schedules on mount and when shiftView changes
   React.useEffect(() => {
@@ -139,9 +140,10 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
     // Build dims as "TagId;ShiftId" format
     const dimsValue = `${shift.TagId};${shift.Id}`;
 
-    if (__DEV__) console.debug(
-      `📊 Using shift schedule for ${shiftView}: dims=[${dimsValue}], start=${shift.StartDateTime}, end=${shift.EndDateTime}`
-    );
+    if (__DEV__)
+      console.debug(
+        `📊 Using shift schedule for ${shiftView}: dims=[${dimsValue}], start=${shift.StartDateTime}, end=${shift.EndDateTime}`
+      );
 
     return {
       dims0: dimsValue,
@@ -241,17 +243,18 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
   // Log production data fetch results
   React.useEffect(() => {
-    if (__DEV__) console.debug('📈 Production data state:', {
-      loading,
-      hasError: !!error,
-      errorMessage: error || undefined,
-      hasData: !!productionData,
-      dataLength: productionData?.length || 0,
-      shiftView,
-      dims0,
-      start: productionStart,
-      end: productionEnd,
-    });
+    if (__DEV__)
+      console.debug('📈 Production data state:', {
+        loading,
+        hasError: !!error,
+        errorMessage: error || undefined,
+        hasData: !!productionData,
+        dataLength: productionData?.length || 0,
+        shiftView,
+        dims0,
+        start: productionStart,
+        end: productionEnd,
+      });
   }, [productionData, loading, error, shiftView, dims0, productionStart, productionEnd]);
 
   // Machine name hook - use API data or fallback to route param
@@ -274,14 +277,15 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
   // Transform API data to chart format
   const chartData = useMemo(() => {
-    if (__DEV__) console.debug('📊 Chart data transformation:', {
-      hasData: !!productionData,
-      dataLength: productionData?.length || 0,
-      shiftView,
-      productionStart,
-      productionEnd,
-      dims0,
-    });
+    if (__DEV__)
+      console.debug('📊 Chart data transformation:', {
+        hasData: !!productionData,
+        dataLength: productionData?.length || 0,
+        shiftView,
+        productionStart,
+        productionEnd,
+        dims0,
+      });
 
     if (!productionData || productionData.length === 0) {
       if (__DEV__) console.debug('⚠️ No production data to display');
@@ -516,14 +520,15 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
         const activeSchedule = shiftView === 'current' ? currentShiftSchedule : lastShiftSchedule;
         const shift = activeSchedule?.Items?.[0];
 
-        if (__DEV__) console.debug(
-          '🔍 Dashboard shift display - shiftView:',
-          shiftView,
-          'has schedule:',
-          !!activeSchedule,
-          'has items:',
-          !!shift
-        );
+        if (__DEV__)
+          console.debug(
+            '🔍 Dashboard shift display - shiftView:',
+            shiftView,
+            'has schedule:',
+            !!activeSchedule,
+            'has items:',
+            !!shift
+          );
 
         if (shift?.StartDateTime && shift?.EndDateTime) {
           try {
@@ -532,7 +537,8 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
             // Check if dates are valid
             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-              if (__DEV__) console.debug('⚠️ Invalid shift dates:', shift.StartDateTime, shift.EndDateTime);
+              if (__DEV__)
+                console.debug('⚠️ Invalid shift dates:', shift.StartDateTime, shift.EndDateTime);
               return null;
             }
 
@@ -546,12 +552,13 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
               });
             };
 
-            if (__DEV__) console.debug(
-              '✅ Dashboard rendering shift times:',
-              shift.StartDateTime,
-              '→',
-              shift.EndDateTime
-            );
+            if (__DEV__)
+              console.debug(
+                '✅ Dashboard rendering shift times:',
+                shift.StartDateTime,
+                '→',
+                shift.EndDateTime
+              );
 
             return (
               <View style={styles.shiftTimeDisplay}>

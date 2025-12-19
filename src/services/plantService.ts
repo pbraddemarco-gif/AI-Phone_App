@@ -4,6 +4,8 @@
  */
 
 import { authApiClient } from './apiClient';
+import { shouldAnonymizeData, anonymizePlant } from '../utils/anonymization';
+import { getCurrentUsername } from './tokenStorage';
 
 export interface Plant {
   Id: number;
@@ -61,18 +63,26 @@ export async function getPlants(clientId: number): Promise<Plant[]> {
     // Filter to only show items where MachineType.Name === "Plant"
     const filteredPlants = plants.filter((p) => p.MachineType.Name === 'Plant');
     if (__DEV__) {
-      console.debug(`📋 Filtered to ${filteredPlants.length} plants (MachineType.Name === "Plant")`);
+      console.debug(
+        `📋 Filtered to ${filteredPlants.length} plants (MachineType.Name === "Plant")`
+      );
     }
 
-    return filteredPlants;
+    // Apply anonymization if needed
+    const username = await getCurrentUsername();
+    const shouldAnonymize = shouldAnonymizeData(username);
+    const processedPlants = shouldAnonymize ? filteredPlants.map(anonymizePlant) : filteredPlants;
+
+    return processedPlants;
   } catch (error: any) {
     if (__DEV__) console.debug('❌ Failed to fetch plants:', error);
-    if (__DEV__) console.debug('❌ Error details:', {
-      message: error?.message,
-      response: error?.response?.data,
-      status: error?.response?.status,
-      url: error?.config?.url,
-    });
+    if (__DEV__)
+      console.debug('❌ Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        url: error?.config?.url,
+      });
     // Return empty array instead of throwing to prevent UI hang
     return [];
   }

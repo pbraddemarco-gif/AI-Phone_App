@@ -32,19 +32,22 @@ export async function getProductionGoals(params: {
     machineIds.forEach((id) => queryParams.append('ids', id.toString()));
     queryParams.append('dateType', dateType);
 
-    if (__DEV__) console.debug(`🎯 Fetching production goals for ${machineIds.length} machines (${dateType})`);
+    if (__DEV__)
+      console.debug(`🎯 Fetching production goals for ${machineIds.length} machines (${dateType})`);
 
     const response = await apiClient.get<ProductionGoalResponse[]>(
       `/machines/productiongoal?${queryParams.toString()}`
     );
 
-    if (__DEV__) console.debug(`✅ Production goals fetched: ${response.data?.length || 0} results`);
+    if (__DEV__)
+      console.debug(`✅ Production goals fetched: ${response.data?.length || 0} results`);
     return response.data || [];
   } catch (error: any) {
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      if (__DEV__) console.debug(
-        `⚠️ Production goal API timeout for ${machineIds.length} machines - using fallback`
-      );
+      if (__DEV__)
+        console.debug(
+          `⚠️ Production goal API timeout for ${machineIds.length} machines - using fallback`
+        );
     } else if (error.response?.status === 504) {
       if (__DEV__) console.debug('⚠️ Production goal API gateway timeout (504) - using fallback');
     } else {

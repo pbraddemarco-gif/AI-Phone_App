@@ -4,6 +4,8 @@
  */
 
 import { authApiClient } from './apiClient';
+import { shouldAnonymizeData, anonymizeMachine } from '../utils/anonymization';
+import { getCurrentUsername } from './tokenStorage';
 
 export interface MachineInventoryItem {
   MachineId: number;
@@ -107,7 +109,12 @@ export async function getMachineInventory(
         return item.MachineId && (machineType === 'DiscreteLine' || machineType === 'StandardOEE');
       });
 
-    return machineData;
+    // Apply anonymization if needed
+    const username = await getCurrentUsername();
+    const shouldAnonymize = shouldAnonymizeData(username);
+    const processedMachines = shouldAnonymize ? machineData.map(anonymizeMachine) : machineData;
+
+    return processedMachines;
   } catch (error: any) {
     if (__DEV__) console.debug('❌ Machine inventory error:', error.message);
     if (error.response) {

@@ -38,8 +38,7 @@
     "production": {
       "ios": {
         "resourceClass": "m-medium",
-        "autoIncrement": true,
-        "bundler": "metro"
+        "autoIncrement": true
       },
       "android": {
         "buildType": "app-bundle",

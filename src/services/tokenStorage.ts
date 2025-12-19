@@ -8,6 +8,38 @@ import { Platform } from 'react-native';
 
 const TOKEN_KEY = 'auth_access_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
+const USERNAME_KEY = 'auth_username';
+const DEV_TOKEN_KEY = 'auth_dev_token';
+
+/**
+ * Save username to secure storage
+ */
+export async function saveUsername(username: string): Promise<void> {
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(USERNAME_KEY, username);
+    } else {
+      await SecureStore.setItemAsync(USERNAME_KEY, username);
+    }
+  } catch (error) {
+    if (__DEV__) console.debug('Failed to save username:', error);
+  }
+}
+
+/**
+ * Get stored username
+ */
+export async function getCurrentUsername(): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(USERNAME_KEY);
+    }
+    return await SecureStore.getItemAsync(USERNAME_KEY);
+  } catch (error) {
+    if (__DEV__) console.debug('Failed to retrieve username:', error);
+    return null;
+  }
+}
 
 /**
  * Save access token to secure storage
@@ -74,6 +106,37 @@ export async function getRefreshToken(): Promise<string | null> {
 }
 
 /**
+ * Save dev token to secure storage (for testuserapp writing to dev server)
+ */
+export async function saveDevToken(token: string): Promise<void> {
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(DEV_TOKEN_KEY, token);
+    } else {
+      await SecureStore.setItemAsync(DEV_TOKEN_KEY, token);
+    }
+  } catch (error) {
+    if (__DEV__) console.debug('Failed to save dev token:', error);
+  }
+}
+
+/**
+ * Retrieve dev token from secure storage
+ */
+export async function getDevToken(): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(DEV_TOKEN_KEY);
+    } else {
+      return await SecureStore.getItemAsync(DEV_TOKEN_KEY);
+    }
+  } catch (error) {
+    if (__DEV__) console.debug('Failed to retrieve dev token:', error);
+    return null;
+  }
+}
+
+/**
  * Clear all authentication tokens from secure storage
  */
 export async function clearToken(): Promise<void> {
@@ -81,9 +144,13 @@ export async function clearToken(): Promise<void> {
     if (Platform.OS === 'web') {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem(USERNAME_KEY);
+      localStorage.removeItem(DEV_TOKEN_KEY);
     } else {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USERNAME_KEY);
+      await SecureStore.deleteItemAsync(DEV_TOKEN_KEY);
     }
   } catch (error) {
     if (__DEV__) console.debug('Failed to clear tokens:', error);

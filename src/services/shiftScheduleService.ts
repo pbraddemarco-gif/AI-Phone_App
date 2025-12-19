@@ -45,14 +45,16 @@ export async function getShiftSchedule(
     // API returns array format: [{TagId, ShiftId, HourStart, ...}] instead of {Items: [...]}
     let shiftData: any;
     if (Array.isArray(response.data)) {
-      if (__DEV__) console.debug(
-        `✅ Shift schedule response: ${response.data.length} shift(s) returned (array format)`
-      );
+      if (__DEV__)
+        console.debug(
+          `✅ Shift schedule response: ${response.data.length} shift(s) returned (array format)`
+        );
       shiftData = response.data[0]; // Extract first shift from array
     } else if (response.data.Items && Array.isArray(response.data.Items)) {
-      if (__DEV__) console.debug(
-        `✅ Shift schedule response: ${response.data.Items.length} shift(s) returned (Items format)`
-      );
+      if (__DEV__)
+        console.debug(
+          `✅ Shift schedule response: ${response.data.Items.length} shift(s) returned (Items format)`
+        );
       shiftData = response.data.Items[0];
     } else {
       if (__DEV__) console.debug('⚠️ Unexpected shift schedule response format:', response.data);
@@ -65,14 +67,15 @@ export async function getShiftSchedule(
     }
 
     // Log the raw shift data for debugging
-    if (__DEV__) console.debug('📋 Raw shift data:', {
-      ShiftId: shiftData.ShiftId || shiftData.Id,
-      TagId: shiftData.TagId,
-      HourStart: shiftData.HourStart,
-      MinuteStart: shiftData.MinuteStart,
-      HourEnd: shiftData.HourEnd,
-      MinuteEnd: shiftData.MinuteEnd,
-    });
+    if (__DEV__)
+      console.debug('📋 Raw shift data:', {
+        ShiftId: shiftData.ShiftId || shiftData.Id,
+        TagId: shiftData.TagId,
+        HourStart: shiftData.HourStart,
+        MinuteStart: shiftData.MinuteStart,
+        HourEnd: shiftData.HourEnd,
+        MinuteEnd: shiftData.MinuteEnd,
+      });
 
     // Calculate actual calendar dates for this shift
     const now = new Date();
@@ -178,22 +181,24 @@ export async function getShiftSchedule(
       // Previous shift starts one shift duration before it ends
       startDate = new Date(endDate.getTime() - shiftDurationMs);
 
-      if (__DEV__) console.debug('🔍 Previous shift calculation:', {
-        shiftEndHour: shiftData.HourEnd,
-        shiftEndMinute: shiftData.MinuteEnd,
-        nextShiftStartTime,
-        currentTime,
-        shiftDurationMs,
-        shiftDurationHours: shiftDurationMs / (1000 * 60 * 60),
-        calculatedStart: startDate.toISOString(),
-        calculatedEnd: endDate.toISOString(),
-      });
+      if (__DEV__)
+        console.debug('🔍 Previous shift calculation:', {
+          shiftEndHour: shiftData.HourEnd,
+          shiftEndMinute: shiftData.MinuteEnd,
+          nextShiftStartTime,
+          currentTime,
+          shiftDurationMs,
+          shiftDurationHours: shiftDurationMs / (1000 * 60 * 60),
+          calculatedStart: startDate.toISOString(),
+          calculatedEnd: endDate.toISOString(),
+        });
     }
 
-    if (__DEV__) console.debug(`📅 Calculated ${mode} shift times:`, {
-      start: toLocalISOString(startDate),
-      end: toLocalISOString(endDate),
-    });
+    if (__DEV__)
+      console.debug(`📅 Calculated ${mode} shift times:`, {
+        start: toLocalISOString(startDate),
+        end: toLocalISOString(endDate),
+      });
 
     // Return in expected format with Items array
     const transformedResponse: ShiftScheduleResponse = {
@@ -204,7 +209,8 @@ export async function getShiftSchedule(
           TagId: shiftData.TagId,
           ShiftGroupId: shiftData.ShiftGroupId || 0,
           Name: shiftData.Name || `Shift ${shiftData.ShiftId || shiftData.Id}`,
-          DisplayName: shiftData.DisplayName || shiftData.Name || `Shift ${shiftData.ShiftId || shiftData.Id}`,
+          DisplayName:
+            shiftData.DisplayName || shiftData.Name || `Shift ${shiftData.ShiftId || shiftData.Id}`,
           Type: shiftData.Type || 'Shift',
           StartDayOfWeekName: shiftData.StartDayOfWeekName || '',
           EndDayOfWeekName: shiftData.EndDayOfWeekName || '',

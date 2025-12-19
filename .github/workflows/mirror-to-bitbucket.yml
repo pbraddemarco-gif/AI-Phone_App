@@ -44,17 +44,17 @@ jobs:
           # URL-encode credentials
           USERNAME_ENCODED=$(node -e "console.log(encodeURIComponent('$BITBUCKET_USERNAME'))")
           PASSWORD_ENCODED=$(node -e "console.log(encodeURIComponent('$BITBUCKET_APP_PASSWORD'))")
-          
+
           # Clone Bitbucket repo
           git clone https://${USERNAME_ENCODED}:${PASSWORD_ENCODED}@bitbucket.org/$BITBUCKET_REPO.git bitbucket-repo
-          
+
           # Remove existing subdirectory contents (keep .git)
           rm -rf bitbucket-repo/$BITBUCKET_SUBDIR/*
           rm -rf bitbucket-repo/$BITBUCKET_SUBDIR/.[!.]*
-          
+
           # Copy GitHub repo contents to subdirectory (excluding .git)
           rsync -av --exclude='.git' --exclude='bitbucket-repo' ./ bitbucket-repo/$BITBUCKET_SUBDIR/
-          
+
           # Commit and push changes
           cd bitbucket-repo
           git add .

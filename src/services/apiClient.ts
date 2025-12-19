@@ -36,16 +36,17 @@ const DEV_PROXY_DATA = `${devProxyBase}/api/data`;
 const isDevelopment = __DEV__;
 const isTunnelMode = Constants.expoConfig?.hostUri?.includes('.exp.direct');
 
-// When using tunnel, bypass proxy and connect directly to production
-const resolvedAuthBase = isDevelopment && !isTunnelMode ? DEV_PROXY_AUTH : PROD_AUTH_BASE_URL;
-const resolvedDataBase = isDevelopment && !isTunnelMode ? DEV_PROXY_DATA : PROD_DATA_BASE_URL;
+// ALWAYS use direct production HTTPS endpoints (no proxy)
+const resolvedAuthBase = PROD_AUTH_BASE_URL;
+const resolvedDataBase = PROD_DATA_BASE_URL;
 
 // Security: Log configuration only in development
 if (isDevelopment) {
   safeLog('info', '[apiClient] Configuration', {
     environment: isDevelopment ? 'development' : 'production',
     tunnelMode: isTunnelMode,
-    devProxyBase,
+    platform: Platform.OS,
+    hostUri: Constants.expoConfig?.hostUri,
     authBase: resolvedAuthBase,
     dataBase: resolvedDataBase,
   });

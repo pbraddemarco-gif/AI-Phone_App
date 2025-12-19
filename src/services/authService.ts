@@ -5,8 +5,20 @@
 
 import axios, { AxiosError } from 'axios';
 import { authApiClient } from './apiClient';
-import { saveToken, saveRefreshToken, getToken, clearToken } from './tokenStorage';
-import type { AuthTokenResponse, LoginCredentials, AuthError, CustomerAccount } from '../types/auth';
+import {
+  saveToken,
+  saveRefreshToken,
+  getToken,
+  clearToken,
+  saveUsername,
+  saveDevToken,
+} from './tokenStorage';
+import type {
+  AuthTokenResponse,
+  LoginCredentials,
+  AuthError,
+  CustomerAccount,
+} from '../types/auth';
 import { extractCustomerAccounts } from './tokenParser';
 import {
   saveCustomerAccounts,
@@ -18,6 +30,7 @@ import { safeLog } from '../utils/logger';
 
 const AUTH_ENDPOINT = '/accounts/token';
 const CLIENT_ID = 'B9C5132D-83A9-40FF-8B06-A00C53322E01';
+const DEV_AUTH_URL = 'https://dev1.automationintellect.com/api/accounts/token';
 
 class AuthService {
   private listeners: Array<() => void> = [];
@@ -117,7 +130,7 @@ class AuthService {
           ...client,
         }));
 
-        await saveCustomerAccounts(customerAccounts);
+        await saveCustomerAccounts(customerAccounts, username);
       }
 
       const { access_token, refresh_token } = data;
@@ -136,6 +149,20 @@ class AuthService {
 
       if (refresh_token) {
         await saveRefreshToken(refresh_token);
+      }
+
+      // Save username for anonymization checks
+      await saveUsername(username);
+
+      // For testuserapp, also fetch dev token from dev server
+      if (username.toLowerCase().includes('testuserapp')) {
+        try {
+          if (__DEV__) console.debug('🔧 Fetching dev token for testuserapp...');
+          await this.fetchAndSaveDevToken(username, password);
+        } catch (devError) {
+          // Don't fail login if dev token fetch fails
+          if (__DEV__) console.debug('⚠️ Failed to fetch dev token:', devError);
+        }
       }
 
       this.notifyAuthChanged();
@@ -175,6 +202,38 @@ class AuthService {
       }
       if (err instanceof Error) throw err;
       throw new Error('Network error. Please check your connection.');
+    }
+  }
+
+  /**
+   * Fetch dev token from development server for testuserapp
+   * This token is used only for Actions screen save operations
+   */
+  private async fetchAndSaveDevToken(username: string, password: string): Promise<void> {
+    const formData = new URLSearchParams();
+    formData.append('grant_type', 'password');
+    formData.append('username', username.trim());
+    formData.append('password', password);
+    formData.append('client_id', CLIENT_ID);
+
+    try {
+      const response = await axios.post<AuthTokenResponse>(DEV_AUTH_URL, formData.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+
+      const { access_token } = response.data;
+
+      if (access_token) {
+        await saveDevToken(access_token);
+        if (__DEV__) {
+          console.debug('✅ Dev token saved successfully');
+        }
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.debug('❌ Failed to fetch dev token from', DEV_AUTH_URL, error);
+      }
+      throw error;
     }
   }
 

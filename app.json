@@ -4,7 +4,11 @@
     "slug": "ai-production-monitor",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "aimobileapp",
@@ -21,7 +25,9 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.automationintellect.aiproductionmonitor",
@@ -50,7 +56,12 @@
       },
       "package": "com.automationintellect.aiproductionmonitor",
       "versionCode": 1,
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -71,6 +82,6 @@
         "projectId": "c8a91170-3131-42db-ac96-ea600a7a48fd"
       }
     },
-    "owner": "pbraddemarco-gif"
+    "owner": "bdemarco"
   }
 }

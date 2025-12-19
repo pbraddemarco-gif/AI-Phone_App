@@ -5,15 +5,24 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerAccount } from '../types/auth';
+import { shouldAnonymizeData, anonymizeCustomerAccount } from '../utils/anonymization';
+import { getCurrentUsername } from './tokenStorage';
 
 const CUSTOMER_ACCOUNTS_KEY = '@customer_accounts';
 
 /**
  * Save customer accounts from login response
  */
-export async function saveCustomerAccounts(accounts: CustomerAccount[]): Promise<void> {
+export async function saveCustomerAccounts(
+  accounts: CustomerAccount[],
+  username?: string
+): Promise<void> {
   try {
-    await AsyncStorage.setItem(CUSTOMER_ACCOUNTS_KEY, JSON.stringify(accounts));
+    const shouldAnonymize = shouldAnonymizeData(username);
+
+    const processedAccounts = shouldAnonymize ? accounts.map(anonymizeCustomerAccount) : accounts;
+
+    await AsyncStorage.setItem(CUSTOMER_ACCOUNTS_KEY, JSON.stringify(processedAccounts));
   } catch (error) {
     if (__DEV__) console.debug('Failed to save customer accounts:', error);
   }

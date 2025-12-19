@@ -324,10 +324,11 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
         getShiftSchedule(machineId, 'current'),
         getShiftSchedule(machineId, 'previous'),
       ]);
-      if (__DEV__) console.debug('📅 Shift schedules received:', {
-        current: current?.Items?.[0],
-        previous: previous?.Items?.[0],
-      });
+      if (__DEV__)
+        console.debug('📅 Shift schedules received:', {
+          current: current?.Items?.[0],
+          previous: previous?.Items?.[0],
+        });
       setCurrentShiftSchedule(current);
       setLastShiftSchedule(previous);
     } catch (error) {
@@ -450,9 +451,10 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
 
             if (hoursElapsed > 0) {
               adjustedGoal = goalData.PartsAvgHourlyGoal * hoursElapsed;
-              if (__DEV__) console.debug(
-                `⏱️ ${displayName}: Shift started at ${shiftStart.toLocaleTimeString()}, ${hoursElapsed.toFixed(2)}h elapsed, hourly goal: ${goalData.PartsAvgHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
-              );
+              if (__DEV__)
+                console.debug(
+                  `⏱️ ${displayName}: Shift started at ${shiftStart.toLocaleTimeString()}, ${hoursElapsed.toFixed(2)}h elapsed, hourly goal: ${goalData.PartsAvgHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
+                );
             }
           } catch (e) {
             if (__DEV__) console.debug('Failed to calculate adjusted goal:', e);
@@ -470,9 +472,10 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
 
         if (hoursElapsed > 0) {
           adjustedGoal = item.PartsHourlyGoal * hoursElapsed;
-          if (__DEV__) console.debug(
-            `⏱️ ${displayName} (fallback): ${hoursElapsed.toFixed(2)}h elapsed since midnight, hourly goal: ${item.PartsHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
-          );
+          if (__DEV__)
+            console.debug(
+              `⏱️ ${displayName} (fallback): ${hoursElapsed.toFixed(2)}h elapsed since midnight, hourly goal: ${item.PartsHourlyGoal}/hr, adjusted goal: ${Math.round(adjustedGoal)}`
+            );
         }
       }
     }
@@ -536,12 +539,13 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
           ]}
           onPress={() => {
             try {
-              if (__DEV__) console.debug('🖱️ Row tapped:', {
-                machineId: item.MachineId,
-                machineName: displayName,
-                type: item?.MachineType?.Name,
-                partsHourlyGoal: item.PartsHourlyGoal,
-              });
+              if (__DEV__)
+                console.debug('🖱️ Row tapped:', {
+                  machineId: item.MachineId,
+                  machineName: displayName,
+                  type: item?.MachineType?.Name,
+                  partsHourlyGoal: item.PartsHourlyGoal,
+                });
 
               if (isLine) {
                 navigation.navigate('ProductionDashboard', {
