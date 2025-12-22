@@ -230,18 +230,7 @@ const ProductionOrdersScreen: React.FC<ProductionOrdersProps> = ({ navigation })
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Production Orders</Text>
-          <Text style={styles.headerSubtitle}>
-            {sortedOrders.length} of {totalItems} order{totalItems !== 1 ? 's' : ''}
-          </Text>
-        </View>
-      </View>
+      {/* Header removed - using native navigation header */}
 
       {/* Filters */}
       <View style={styles.filterContainer}>

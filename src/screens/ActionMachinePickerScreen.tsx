@@ -212,22 +212,7 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Select Machines</Text>
-        {plantName ? <Text style={styles.subtitle}>{plantName}</Text> : null}
-      </View>
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563EB" />
-          <Text style={styles.muted}>Loading machines…</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>⚠️ {error}</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.listContainer}>
+      <ScrollView contentContainerStyle={styles.listContainer}>
           {topLevel.length ? (
             topLevel.map((item) => renderRow(item))
           ) : (

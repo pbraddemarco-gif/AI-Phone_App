@@ -121,25 +121,21 @@ export function MachineShiftComparisonScreen({ route }: MachineShiftComparisonSc
       }
       alwaysBounceVertical={true}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>Shift Comparison</Text>
-        <Text style={styles.machineLabel}>Machine #{machineId}</Text>
-
-        <View style={styles.shiftInfoContainer}>
-          <View style={styles.shiftInfo}>
-            <View style={[styles.shiftIndicator, { backgroundColor: '#3788d8' }]} />
-            <View>
-              <Text style={styles.shiftLabel}>Current Shift</Text>
-              <Text style={styles.shiftDate}>{formatShiftLabel(currentShift)}</Text>
-            </View>
+      {/* Header info section */}
+      <View style={styles.shiftInfoContainer}>
+        <View style={styles.shiftInfo}>
+          <View style={[styles.shiftIndicator, { backgroundColor: '#3788d8' }]} />
+          <View>
+            <Text style={styles.shiftLabel}>Current Shift</Text>
+            <Text style={styles.shiftDate}>{formatShiftLabel(currentShift)}</Text>
           </View>
+        </View>
 
-          <View style={styles.shiftInfo}>
-            <View style={[styles.shiftIndicator, { backgroundColor: '#868e96' }]} />
-            <View>
-              <Text style={styles.shiftLabel}>Previous Shift</Text>
-              <Text style={styles.shiftDate}>{formatShiftLabel(previousShift)}</Text>
-            </View>
+        <View style={styles.shiftInfo}>
+          <View style={[styles.shiftIndicator, { backgroundColor: '#868e96' }]} />
+          <View>
+            <Text style={styles.shiftLabel}>Previous Shift</Text>
+            <Text style={styles.shiftDate}>{formatShiftLabel(previousShift)}</Text>
           </View>
         </View>
       </View>

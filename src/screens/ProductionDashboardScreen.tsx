@@ -429,34 +429,16 @@ const ProductionDashboardScreen: React.FC<ProductionDashboardProps> = ({ navigat
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => navigation.goBack()} accessibilityLabel="Back">
-            <Text style={[styles.backButton, { color: theme.colors.text }]}>‹</Text>
-          </TouchableOpacity>
-          <View>
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-              {displayMachineName}
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.colors.neutralText }]}>
-              Current Product:{' '}
-              <Text style={{ fontWeight: 'bold' }}>
-                {statusLoading ? 'Loading…' : machineStatus?.Product?.DisplayName || 'No Product'}
-              </Text>
-            </Text>
-          </View>
-        </View>
-        {DEV_FLAGS.SHOW_TEMP_LOGOUT_BUTTON && (
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            accessibilityLabel="Logout"
-          >
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Header removed - using native navigation header */}
+      {DEV_FLAGS.SHOW_TEMP_LOGOUT_BUTTON && (
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          accessibilityLabel="Logout"
+        >
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Error Banner */}
       {error && (

@@ -32,13 +32,15 @@ const devProxyBase = getDevProxyBase();
 const DEV_PROXY_AUTH = `${devProxyBase}/api/auth`;
 const DEV_PROXY_DATA = `${devProxyBase}/api/data`;
 
-// Check environment - if using tunnel mode, bypass proxy and use production directly
+// Check environment
 const isDevelopment = __DEV__;
 const isTunnelMode = Constants.expoConfig?.hostUri?.includes('.exp.direct');
+const isWeb = Platform.OS === 'web';
 
-// ALWAYS use direct production HTTPS endpoints (no proxy)
-const resolvedAuthBase = PROD_AUTH_BASE_URL;
-const resolvedDataBase = PROD_DATA_BASE_URL;
+// Web ALWAYS uses proxy to avoid CORS
+// Native in tunnel mode uses direct HTTPS
+const resolvedAuthBase = isWeb && isDevelopment ? DEV_PROXY_AUTH : PROD_AUTH_BASE_URL;
+const resolvedDataBase = isWeb && isDevelopment ? DEV_PROXY_DATA : PROD_DATA_BASE_URL;
 
 // Security: Log configuration only in development
 if (isDevelopment) {

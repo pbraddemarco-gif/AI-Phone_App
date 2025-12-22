@@ -38,9 +38,10 @@ export function decodeJwtToken(token: string): DecodedToken | null {
     // JWT format: header.payload.signature
     const parts = token.split('.');
     if (parts.length !== 3) {
-      if (__DEV__) console.debug(
-        `⚠️ Token is not in JWT format (has ${parts.length} parts instead of 3) - skipping decode`
-      );
+      if (__DEV__)
+        console.debug(
+          `⚠️ Token is not in JWT format (has ${parts.length} parts instead of 3) - skipping decode`
+        );
       return null;
     }
 
@@ -107,7 +108,11 @@ export function extractCustomerAccounts(token: string): CustomerAccount[] {
   }
 
   if (!accountData) {
-    if (__DEV__) console.debug('⚠️ No account information found in token. Available keys:', Object.keys(decoded));
+    if (__DEV__)
+      console.debug(
+        '⚠️ No account information found in token. Available keys:',
+        Object.keys(decoded)
+      );
     return [];
   }
 
@@ -147,22 +152,35 @@ export function getCustomerById(token: string, customerId: number): CustomerAcco
  * @returns Username string or null if not found
  */
 export function getUsernameFromToken(token: string): string | null {
+  console.log('🔍 getUsernameFromToken called');
   const decoded = decodeJwtToken(token);
 
   if (!decoded) {
+    console.log('❌ Token decode failed');
     return null;
   }
 
+  console.log('✅ Token decoded successfully. Keys:', Object.keys(decoded));
+  console.log('🔎 Checking username claims:');
+  console.log('  - unique_name:', decoded.unique_name);
+  console.log('  - preferred_username:', decoded.preferred_username);
+  console.log('  - username:', decoded.username);
+  console.log('  - name:', decoded.name);
+  console.log('  - email:', decoded.email);
+  console.log('  - sub:', decoded.sub);
+
   // Try common JWT username claims in order of preference
-  return (
+  const result =
     decoded.unique_name ||
     decoded.preferred_username ||
     decoded.username ||
     decoded.name ||
     decoded.email ||
     decoded.sub ||
-    null
-  );
+    null;
+
+  console.log('📤 Returning username:', result);
+  return result;
 }
 
 /**

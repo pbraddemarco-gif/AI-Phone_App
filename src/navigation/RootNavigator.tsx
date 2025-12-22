@@ -17,6 +17,7 @@ import CustomerSelectorScreen from '../screens/CustomerSelectorScreen';
 import ProductionOrdersScreen from '../screens/ProductionOrdersScreen';
 import ActionsScreen from '../screens/ActionsScreen';
 import ActionMachinePickerScreen from '../screens/ActionMachinePickerScreen';
+import ActionUserPickerScreen from '../screens/ActionUserPickerScreen';
 import { RootStackParamList } from '../types/navigation';
 import { authService } from '../services/authService';
 import { DEV_FLAGS } from '../config/devFlags';
@@ -47,10 +48,11 @@ export default function RootNavigator() {
         return;
       }
       const authenticated = await authService.isAuthenticated();
-      if (__DEV__) console.debug(
-        '🔍 Auth status check:',
-        authenticated ? 'AUTHENTICATED ✅' : 'NOT AUTHENTICATED ❌'
-      );
+      if (__DEV__)
+        console.debug(
+          '🔍 Auth status check:',
+          authenticated ? 'AUTHENTICATED ✅' : 'NOT AUTHENTICATED ❌'
+        );
       setIsAuthenticated(authenticated);
     } catch (error) {
       if (__DEV__) console.debug('Error checking auth status:', error);
@@ -92,7 +94,7 @@ export default function RootNavigator() {
           <Stack.Screen
             name="ProductionDashboard"
             component={ProductionDashboardScreen}
-            options={{ headerShown: false }}
+            options={{ title: 'Production Dashboard' }}
           />
           <Stack.Screen
             name="MachineShiftComparison"
@@ -102,18 +104,23 @@ export default function RootNavigator() {
           <Stack.Screen
             name="PlantLayout"
             component={PlantLayoutScreen}
-            options={{ headerShown: false }}
+            options={{ title: 'Plant Layout' }}
           />
           <Stack.Screen
             name="ProductionOrders"
             component={ProductionOrdersScreen}
-            options={{ headerShown: false }}
+            options={{ title: 'Production Orders' }}
           />
           <Stack.Screen name="Actions" component={ActionsScreen} options={{ title: 'Actions' }} />
           <Stack.Screen
             name="ActionMachinePicker"
             component={ActionMachinePickerScreen}
             options={{ title: 'Select Machines' }}
+          />
+          <Stack.Screen
+            name="ActionUserPicker"
+            component={ActionUserPickerScreen}
+            options={{ title: 'Select Users' }}
           />
           <Stack.Screen name="Details" component={DetailsScreen} options={{ title: 'Details' }} />
         </>

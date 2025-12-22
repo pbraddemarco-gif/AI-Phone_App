@@ -33,6 +33,14 @@ export type RootStackParamList = {
         onSelectMachines?: (selections: ActionMachineSelection[]) => void;
       }
     | undefined;
+  ActionUserPicker:
+    | {
+        machineId: number;
+        machineName?: string;
+        initialSelected?: ActionUserSelection[];
+        onSelectUsers?: (selections: ActionUserSelection[]) => void;
+      }
+    | undefined;
 };
 
 export type ActionMachineSelection = {
@@ -40,4 +48,10 @@ export type ActionMachineSelection = {
   name: string;
   isLine?: boolean;
   parentLineId?: number | null;
+};
+
+export type ActionUserSelection = {
+  userId: number;
+  name: string;
+  username?: string;
 };

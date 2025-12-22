@@ -71,6 +71,13 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
   const machineId = route.params?.machineId ?? 498;
   const machineName = route.params?.machineName ?? 'Plant Layout';
 
+  // Update header title with plant/area name
+  useEffect(() => {
+    navigation.setOptions({
+      title: machineName ? `Plant Layout (${machineName})` : 'Plant Layout',
+    });
+  }, [navigation, machineName]);
+
   useEffect(() => {
     fetchPlantLayout();
   }, [machineId]);
@@ -354,18 +361,7 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={[styles.backButton, { color: theme.colors.text }]}>‹</Text>
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{machineName}</Text>
-          </View>
-          <TouchableOpacity onPress={fetchPlantLayout}>
-            <Text style={[styles.refreshButton, { color: theme.colors.accent }]}>⟳</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Header removed - using native navigation header */}
 
         {/* Content */}
         <View style={styles.contentContainer}>

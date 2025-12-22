@@ -13,7 +13,11 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { RootStackParamList, ActionMachineSelection } from '../types/navigation';
+import {
+  RootStackParamList,
+  ActionMachineSelection,
+  ActionUserSelection,
+} from '../types/navigation';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadTaskMedia } from '../services/mediaService';
@@ -27,8 +31,8 @@ import {
   ActionCategory,
 } from '../services/actionTemplateService';
 import { useAppTheme } from '../hooks/useAppTheme';
-import { getToken } from '../services/tokenStorage';
-import { getUsernameFromToken } from '../services/tokenParser';
+import { getCurrentUsername } from '../services/tokenStorage';
+import { safeLog } from '../utils/logger';
 
 export type ActionsScreenProps = NativeStackScreenProps<RootStackParamList, 'Actions'>;
 
@@ -62,6 +66,12 @@ function isUploadField(field: ActionTemplateField) {
 function isRelatedMachinesField(field: ActionTemplateField) {
   const display = (field.DisplayName || '').toLowerCase();
   return display.includes('related to machines');
+}
+
+function isRelatedUsersField(field: ActionTemplateField) {
+  const display = (field.DisplayName || '').toLowerCase();
+  // Match common labels: "Related to Users", "Assign Users", "Users"
+  return display.includes('users') && !display.includes('created by');
 }
 
 function isCreatedByField(field: ActionTemplateField) {
@@ -107,6 +117,7 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
   const [linkedMachines, setLinkedMachines] = useState<ActionMachineSelection[]>(
     routeParams.selectedMachines || []
   );
+  const [linkedUsers, setLinkedUsers] = useState<ActionUserSelection[]>([]);
 
   useEffect(() => {
     if (routeParams.selectedMachines !== undefined) {
@@ -175,38 +186,90 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
     setFormState((prev) => {
       const current = prev[relatedField.FieldName];
       if (current === serialized) return prev;
+      safeLog('debug', 'Actions: machines field updated', {
+        field: relatedField.FieldName,
+        count: linkedMachines.length,
+      });
       return { ...prev, [relatedField.FieldName]: serialized };
     });
   }, [selectedTemplate, linkedMachines]);
 
-  // Auto-populate Created by field with username from token
+  // Keep users field in sync when users change
   useEffect(() => {
     if (!selectedTemplate) return;
+    const usersField = selectedTemplate.fields.find(isRelatedUsersField);
+    if (!usersField) return;
+
+    const serialized = JSON.stringify(
+      linkedUsers.map((u) => ({ id: u.userId, name: u.name, username: u.username || null }))
+    );
+
+    setFormState((prev) => {
+      const current = prev[usersField.FieldName];
+      if (current === serialized) return prev;
+      safeLog('debug', 'Actions: users field updated', {
+        field: usersField.FieldName,
+        count: linkedUsers.length,
+      });
+      return { ...prev, [usersField.FieldName]: serialized };
+    });
+  }, [selectedTemplate, linkedUsers]);
+
+  // Clear linked users when machines change or are removed
+  // Users are tied to the first machine, so if it changes, clear user selections
+  useEffect(() => {
+    if (linkedMachines.length === 0 && linkedUsers.length > 0) {
+      console.log('🧹 Clearing users because no machines are selected');
+      setLinkedUsers([]);
+    }
+  }, [linkedMachines.length, linkedUsers.length]);
+
+  // Auto-populate Created by field with username from token storage
+  useEffect(() => {
+    console.log('🔄 Effect triggered: selectedTemplate changed');
+    if (!selectedTemplate) {
+      console.log('⚠️ No selected template');
+      return;
+    }
+
+    console.log('🔍 Looking for "Created by" field in', selectedTemplate.fields.length, 'fields');
 
     const createdByField = selectedTemplate.fields.find(isCreatedByField);
-    if (!createdByField) return;
+    if (!createdByField) {
+      console.log('❌ No "Created by" field found in template');
+      return;
+    }
+
+    console.log(
+      '✅ Found "Created by" field:',
+      createdByField.DisplayName,
+      '| FieldName:',
+      createdByField.FieldName
+    );
 
     const populateUsername = async () => {
       try {
-        const token = await getToken();
-        if (!token) {
-          if (__DEV__) console.debug('ℹ️ ActionsScreen: No token available for username extraction');
-          return;
-        }
+        console.log('🔑 Getting username from storage...');
+        const username = await getCurrentUsername();
+        console.log('👤 getCurrentUsername returned:', username);
 
-        const username = getUsernameFromToken(token);
         if (username) {
-          if (__DEV__) console.debug('✅ ActionsScreen: Extracted username:', username);
+          console.log(
+            '✅ Setting Created by field to:',
+            username,
+            '| Field:',
+            createdByField.FieldName
+          );
           setFormState((prev) => {
-            // Only set if not already set by user
-            if (prev[createdByField.FieldName]) return prev;
-            return { ...prev, [createdByField.FieldName]: username };
+            const newState = { ...prev, [createdByField.FieldName]: username };
+            console.log('📝 Form state updated. Field value:', newState[createdByField.FieldName]);
+            return newState;
           });
         } else {
-          if (__DEV__) console.debug('ℹ️ ActionsScreen: Could not extract username from token (non-JWT format)');
+          console.log('❌ Username is null/empty');
         }
       } catch (e) {
-        if (__DEV__) console.debug('⚠️ ActionsScreen: Failed to get username from token', e);
+        console.error('❌ Error in populateUsername:', e);
       }
     };
 
@@ -256,6 +319,8 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
   }
 
   const handleSelectTemplate = async (template: ActionTemplateSummary) => {
+    console.log('🎯 Actions: template selected', template.Id, template.Name);
+    safeLog('debug', 'Actions: template selected', { id: template.Id, name: template.Name });
     setSelectedId(template.Id);
     setDetailError(null);
     setCategoriesError(null);
@@ -275,6 +340,18 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
         setDetailError('Template not found');
         return;
       }
+      const hasUsersField = detail.fields.some(isRelatedUsersField);
+      const hasMachinesField = detail.fields.some(isRelatedMachinesField);
+      console.log(
+        '📋 Actions: template fields:',
+        detail.fields.map((f) => f.DisplayName)
+      );
+      console.log('✅ Has users field?', hasUsersField, '| Has machines field?', hasMachinesField);
+      safeLog('debug', 'Actions: template detail loaded', {
+        fieldCount: detail.fields.length,
+        hasUsersField,
+        hasMachinesField,
+      });
       setTemplateCache((prev) => ({ ...prev, [template.Id]: detail }));
       setFormState(buildDefaultState(detail));
       await loadCategories(template.Name);
@@ -515,10 +592,6 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Actions</Text>
-      </View>
-
       {loading && (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -534,35 +607,37 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
 
       {!loading && !error ? (
         <View style={styles.content}>
-          <Text style={styles.sectionTitle}>Templates</Text>
-          <View style={styles.templateGrid}>
-            {templates.map((item) => {
-              const isActive = item.Id === selectedId;
-              return (
-                <TouchableOpacity
-                  key={item.Id}
-                  onPress={() => handleSelectTemplate(item)}
-                  style={[styles.templateCard, isActive && styles.templateCardActive]}
-                >
-                  <Text style={[styles.templateName, isActive && styles.templateNameActive]}>
-                    {item.DisplayName || item.Name}
-                  </Text>
-                  {item.Description ? (
-                    <Text
-                      style={[
-                        styles.templateDescription,
-                        isActive && styles.templateDescriptionActive,
-                      ]}
-                    >
-                      {item.Description}
+          <View style={styles.templateSection}>
+            <Text style={styles.sectionTitle}>Templates</Text>
+            <View style={styles.templateGrid}>
+              {templates.map((item) => {
+                const isActive = item.Id === selectedId;
+                return (
+                  <TouchableOpacity
+                    key={item.Id}
+                    onPress={() => handleSelectTemplate(item)}
+                    style={[styles.templateCard, isActive && styles.templateCardActive]}
+                  >
+                    <Text style={[styles.templateName, isActive && styles.templateNameActive]}>
+                      {item.DisplayName || item.Name}
                     </Text>
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
+                    {item.Description ? (
+                      <Text
+                        style={[
+                          styles.templateDescription,
+                          isActive && styles.templateDescriptionActive,
+                        ]}
+                      >
+                        {item.Description}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.formContainer}>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.formContainer}>
             <Text style={styles.sectionTitle}>Details</Text>
             <View style={styles.card}>
               {detailLoading ? (
@@ -582,7 +657,11 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
                             <Text style={styles.fieldLabel}>{field.DisplayName}</Text>
                             <TouchableOpacity
                               style={styles.addLink}
-                              onPress={() =>
+                              onPress={() => {
+                                safeLog('debug', 'Actions: navigate to machine picker', {
+                                  plantId: contextParams.plantId,
+                                  preselectedCount: linkedMachines.length,
+                                });
                                 navigation.navigate('ActionMachinePicker', {
                                   customerId: contextParams.customerId,
                                   customerName: contextParams.customerName,
@@ -590,10 +669,14 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
                                   plantName: contextParams.plantName,
                                   initialSelected: linkedMachines,
                                   onSelectMachines: (selections: ActionMachineSelection[]) => {
+                                    safeLog('debug', 'Actions: machines selected from picker', {
+                                      count: selections.length,
+                                      ids: selections.map((m) => m.machineId),
+                                    });
                                     setLinkedMachines(selections);
                                   },
-                                })
-                              }
+                                });
+                              }}
                             >
                               <Text style={styles.addLinkText}>+ Add</Text>
                             </TouchableOpacity>
@@ -611,6 +694,78 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
                             </View>
                           ) : (
                             <Text style={styles.muted}>No machines linked</Text>
+                          )}
+                        </View>
+                      );
+                    }
+                    if (isRelatedUsersField(field)) {
+                      console.log(
+                        '🎨 Rendering users field UI for:',
+                        field.DisplayName,
+                        '| Machines:',
+                        linkedMachines.length
+                      );
+                      const firstMachine = linkedMachines[0];
+                      const hasNoMachine = !firstMachine;
+                      return (
+                        <View key={field.FieldName} style={styles.fieldRow}>
+                          <View style={styles.inlineLabelRow}>
+                            <Text style={styles.fieldLabel}>{field.DisplayName}</Text>
+                            {hasNoMachine && (
+                              <Text style={styles.helperText}>(Add a machine first)</Text>
+                            )}
+                            <TouchableOpacity
+                              style={[styles.addLink, hasNoMachine && styles.addLinkDisabled]}
+                              disabled={hasNoMachine}
+                              onPress={() => {
+                                console.log(
+                                  '🖱️ + Add Users button clicked! firstMachine:',
+                                  firstMachine
+                                );
+                                if (!firstMachine) {
+                                  Alert.alert(
+                                    'Select a machine',
+                                    'Please add a machine first to pick users.'
+                                  );
+                                  return;
+                                }
+                                console.log(
+                                  '👥 Navigating to user picker for machine:',
+                                  firstMachine.machineId,
+                                  firstMachine.name
+                                );
+                                safeLog('debug', 'Actions: navigate to user picker', {
+                                  machineId: firstMachine.machineId,
+                                  machineName: firstMachine.name,
+                                  preselectedCount: linkedUsers.length,
+                                });
+                                navigation.navigate('ActionUserPicker', {
+                                  machineId: firstMachine.machineId,
+                                  machineName: firstMachine.name,
+                                  initialSelected: linkedUsers,
+                                  onSelectUsers: (selections: ActionUserSelection[]) => {
+                                    safeLog('debug', 'Actions: users selected from picker', {
+                                      count: selections.length,
+                                      ids: selections.map((u) => u.userId),
+                                    });
+                                    setLinkedUsers(selections);
+                                  },
+                                });
+                              }}
+                            >
+                              <Text style={styles.addLinkText}>+ Add</Text>
+                            </TouchableOpacity>
+                          </View>
+                          {linkedUsers.length ? (
+                            <View style={styles.selectionChips}>
+                              {linkedUsers.map((u) => (
+                                <View key={u.userId} style={styles.selectionChip}>
+                                  <Text style={styles.selectionChipText}>{u.name}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          ) : (
+                            <Text style={styles.muted}>No users linked</Text>
                           )}
                         </View>
                       );
@@ -882,23 +1037,23 @@ export default function ActionsScreen({ navigation, route }: ActionsScreenProps)
               ) : (
                 <Text style={styles.muted}>Select a template to begin.</Text>
               )}
-
-              {selectedTemplate && !detailLoading ? (
-                <>
-                  {submitError ? <Text style={styles.errorText}>⚠️ {submitError}</Text> : null}
-                  <TouchableOpacity
-                    style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-                    onPress={handleSubmit}
-                    disabled={submitting}
-                  >
-                    <Text style={styles.submitText}>
-                      {submitting ? 'Saving & Uploading...' : 'Save Action'}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              ) : null}
             </View>
           </ScrollView>
+
+          {selectedTemplate && !detailLoading ? (
+            <View style={styles.buttonContainer}>
+              {submitError ? <Text style={styles.errorText}>⚠️ {submitError}</Text> : null}
+              <TouchableOpacity
+                style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={submitting}
+              >
+                <Text style={styles.submitText}>
+                  {submitting ? 'Saving & Uploading...' : 'Save Action'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </SafeAreaView>
@@ -921,10 +1076,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  scrollView: {
+    flex: 1,
   },
   formContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   center: {
     paddingTop: 40,
@@ -941,15 +1101,20 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
   },
+  templateSection: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
   templateCard: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: '#F3F4F6',
-    marginRight: 10,
     marginBottom: 10,
-    minWidth: 120,
     alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 4,
   },
   templateCardActive: {
     backgroundColor: '#DBEAFE',
@@ -957,7 +1122,7 @@ const styles = StyleSheet.create({
     borderColor: '#2563EB',
   },
   templateName: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#111827',
     fontWeight: '600',
     textAlign: 'center',
@@ -968,7 +1133,7 @@ const styles = StyleSheet.create({
   templateDescription: {
     marginTop: 4,
     color: '#4B5563',
-    fontSize: 12,
+    fontSize: 10,
     textAlign: 'center',
   },
   templateDescriptionActive: {
@@ -977,7 +1142,7 @@ const styles = StyleSheet.create({
   templateGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingBottom: 12,
   },
   fieldRow: {
@@ -1039,9 +1204,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  buttonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
   submitButton: {
-    marginTop: 16,
-    backgroundColor: '#2563EB',
+    marginTop: 0,
+    backgroundColor: '#3788d8',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
@@ -1178,9 +1349,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#111827',
   },
+  addLinkDisabled: {
+    backgroundColor: '#D1D5DB',
+    opacity: 0.5,
+  },
   addLinkText: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    marginLeft: 8,
   },
   placeholderText: {
     color: '#9CA3AF',
