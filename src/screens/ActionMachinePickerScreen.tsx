@@ -22,7 +22,8 @@ export type ActionMachinePickerProps = NativeStackScreenProps<
 
 export default function ActionMachinePickerScreen({ navigation, route }: ActionMachinePickerProps) {
   const theme = useAppTheme();
-  const { plantId, plantName, initialSelected, onSelectMachines } = route.params || {};
+  const { plantId, plantName, initialSelected, customerId, customerName, selectedTemplateId } =
+    route.params || {};
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [machines, setMachines] = useState<MachineInventoryItem[]>([]);
@@ -151,11 +152,18 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
       }
     });
 
-    if (onSelectMachines) {
-      onSelectMachines(selections);
-    }
-
-    navigation.goBack();
+    // Navigate back to Actions2 with the selections
+    navigation.navigate('Actions2', {
+      customerId,
+      customerName,
+      plantId,
+      plantName,
+      selectedMachines: selections,
+      selectedTemplateId,
+      actionId: route.params?.actionId,
+      actionData: route.params?.actionData,
+      returnScrollY: route.params?.returnScrollY,
+    });
   };
 
   const renderRow = (machine: MachineInventoryItem, depth = 0) => {
@@ -213,13 +221,12 @@ export default function ActionMachinePickerScreen({ navigation, route }: ActionM
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView contentContainerStyle={styles.listContainer}>
-          {topLevel.length ? (
-            topLevel.map((item) => renderRow(item))
-          ) : (
-            <Text style={styles.muted}>No lines or machines found for this plant.</Text>
-          )}
-        </ScrollView>
-      )}
+        {topLevel.length ? (
+          topLevel.map((item) => renderRow(item))
+        ) : (
+          <Text style={styles.muted}>No lines or machines found for this plant.</Text>
+        )}
+      </ScrollView>
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerButton} onPress={handleSave}>

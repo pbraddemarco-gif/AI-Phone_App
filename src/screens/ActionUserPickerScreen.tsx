@@ -18,7 +18,16 @@ export type ActionUserPickerProps = NativeStackScreenProps<RootStackParamList, '
 
 export default function ActionUserPickerScreen({ navigation, route }: ActionUserPickerProps) {
   const theme = useAppTheme();
-  const { machineId, initialSelected, onSelectUsers } = route.params || {};
+  const {
+    machineId,
+    initialSelected,
+    customerId,
+    customerName,
+    plantId,
+    plantName,
+    selectedMachines,
+    selectedTemplateId,
+  } = route.params || {};
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<ActionUserSelection[]>([]);
@@ -72,12 +81,38 @@ export default function ActionUserPickerScreen({ navigation, route }: ActionUser
 
   const handleSave = () => {
     const selections: ActionUserSelection[] = users.filter((u) => selected.has(u.userId));
+    const selectionType = (route.params as any)?.selectionType as
+      | 'assigned'
+      | 'related'
+      | undefined;
     safeLog('debug', 'UserPicker: save selections', {
       count: selections.length,
       ids: selections.map((s) => s.userId),
+      selectionType,
     });
-    if (onSelectUsers) onSelectUsers(selections);
-    navigation.goBack();
+
+    // Navigate back to Actions2 with the selections, then pop this picker screen
+    const payload: any = {
+      customerId,
+      customerName,
+      plantId,
+      plantName,
+      selectedMachines,
+      selectedTemplateId,
+      actionId: route.params?.actionId,
+      actionData: route.params?.actionData,
+      returnScrollY: route.params?.returnScrollY,
+      fieldName: route.params?.fieldName,
+      selectionType,
+    };
+
+    if (selectionType === 'assigned') {
+      payload.assignedUsers = selections;
+    } else {
+      payload.relatedUsers = selections;
+    }
+
+    navigation.navigate('Actions2', payload);
   };
 
   return (

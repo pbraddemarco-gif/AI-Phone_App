@@ -593,13 +593,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
   },
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
-    marginRight: 8,
+    marginRight: 6,
+    flexShrink: 1,
   },
   filterDropdown: {
     flexDirection: 'row',
@@ -611,8 +612,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    marginRight: 16,
-    minWidth: 120,
+    marginRight: 12,
+    minWidth: 100,
+    flex: 1,
   },
   filterDropdownText: {
     fontSize: 14,

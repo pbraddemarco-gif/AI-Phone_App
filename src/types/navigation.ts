@@ -21,6 +21,23 @@ export type RootStackParamList = {
         plantId?: number;
         plantName?: string;
         selectedMachines?: ActionMachineSelection[];
+        selectedUsers?: ActionUserSelection[];
+        selectedTemplateId?: number;
+        returnScrollY?: number;
+      }
+    | undefined;
+  Actions2:
+    | {
+        actionId?: number;
+        actionData?: any;
+        selectedMachines?: ActionMachineSelection[];
+        selectedUsers?: ActionUserSelection[]; // legacy
+        relatedUsers?: ActionUserSelection[];
+        assignedUsers?: ActionUserSelection[];
+        selectedTemplateId?: number;
+        returnScrollY?: number;
+        fieldName?: string;
+        selectionType?: 'assigned' | 'related';
       }
     | undefined;
   ActionMachinePicker:
@@ -30,7 +47,11 @@ export type RootStackParamList = {
         plantId?: number;
         plantName?: string;
         initialSelected?: ActionMachineSelection[];
+        selectedTemplateId?: number;
+        actionId?: number;
+        actionData?: any;
         onSelectMachines?: (selections: ActionMachineSelection[]) => void;
+        returnScrollY?: number;
       }
     | undefined;
   ActionUserPicker:
@@ -38,9 +59,22 @@ export type RootStackParamList = {
         machineId: number;
         machineName?: string;
         initialSelected?: ActionUserSelection[];
+        customerId?: number;
+        customerName?: string;
+        plantId?: number;
+        plantName?: string;
+        selectedMachines?: ActionMachineSelection[];
+        selectedTemplateId?: number;
+        actionId?: number;
+        actionData?: any;
         onSelectUsers?: (selections: ActionUserSelection[]) => void;
+        returnScrollY?: number;
+        fieldName?: string;
+        selectionType?: 'assigned' | 'related';
+        singleSelect?: boolean;
       }
     | undefined;
+  ActionList: { reload?: boolean } | undefined;
 };
 
 export type ActionMachineSelection = {

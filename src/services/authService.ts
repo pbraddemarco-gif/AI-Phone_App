@@ -82,6 +82,13 @@ class AuthService {
     formData.append('client_id', CLIENT_ID);
 
     try {
+      if (__DEV__) {
+        console.debug('🔐 Starting login request...', {
+          endpoint: AUTH_ENDPOINT,
+          baseURL: authApiClient.defaults.baseURL,
+        });
+      }
+
       const response = await authApiClient.post<AuthTokenResponse>(
         AUTH_ENDPOINT,
         formData.toString(),
@@ -90,6 +97,10 @@ class AuthService {
           // Axios will handle CORS when hitting proxy on web; upstream direct on native.
         }
       );
+
+      if (__DEV__) {
+        console.debug('✅ Login response received');
+      }
 
       const data = response.data;
 
@@ -219,6 +230,7 @@ class AuthService {
     try {
       const response = await axios.post<AuthTokenResponse>(DEV_AUTH_URL, formData.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000, // 5 second timeout for dev token
       });
 
       const { access_token } = response.data;
@@ -233,7 +245,7 @@ class AuthService {
       if (__DEV__) {
         console.debug('❌ Failed to fetch dev token from', DEV_AUTH_URL, error);
       }
-      throw error;
+      // Don't throw - allow login to proceed without dev token
     }
   }
 

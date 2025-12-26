@@ -24,27 +24,32 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',');
 // Logging
 app.use(morgan('combined'));
 
-// Basic rate limiting (dev only)
-app.use(
-  rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 100,
-    standardHeaders: true,
-    legacyHeaders: false,
-  })
-);
-
-// Hardened CORS
+// Hardened CORS first so preflights always get headers
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS.includes('*') || (origin && ALLOWED_ORIGINS.includes(origin))) {
+  // Allow all localhost origins for development
+  if (
+    ALLOWED_ORIGINS.includes('*') ||
+    (origin && (ALLOWED_ORIGINS.includes(origin) || origin.startsWith('http://localhost:')))
+  ) {
     res.header('Access-Control-Allow-Origin', origin || '*');
   }
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
+
+// Basic rate limiting (dev only) — loosened to avoid noisy 429s during dev
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 5000,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -57,8 +62,31 @@ app.use(
   createProxyMiddleware({
     target: UPSTREAM_AUTH,
     changeOrigin: true,
-    pathRewrite: { '^/api/auth': '' },
+    pathRewrite: (path, req) => {
+      // Strip /api/auth prefix
+      let newPath = path.replace(/^\/api\/auth/, '');
+      // Append api-version query param if not already present
+      const separator = newPath.includes('?') ? '&' : '?';
+      if (!newPath.includes('api-version=')) {
+        newPath += `${separator}api-version=1.0`;
+      }
+      return newPath;
+    },
     logLevel: 'debug',
+    onProxyReq: (proxyReq, req, res) => {
+      console.log(`[proxy ➡️] ${req.method} ${req.originalUrl}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      const chunks = [];
+      proxyRes.on('data', (chunk) => chunks.push(chunk));
+      proxyRes.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        console.log(`[proxy ⬅️] ${req.method} ${req.originalUrl} -> ${proxyRes.statusCode}`);
+        if (proxyRes.statusCode >= 400) {
+          console.log(`[proxy ⛔] Response body: ${body}`);
+        }
+      });
+    },
   })
 );
 
@@ -91,16 +119,20 @@ app.use((err, req, res, next) => {
 
 process.on('uncaughtException', (err) => {
   console.error(`[${new Date().toISOString()}] Uncaught Exception:`, err);
-  process.exit(1);
+  console.error('Stack:', err.stack);
+  // Don't exit - keep server running
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error(`[${new Date().toISOString()}] Unhandled Rejection:`, reason);
-  process.exit(1);
+  console.error('Promise:', promise);
+  // Don't exit - keep server running
 });
 
-app.listen(PORT, () => {
-  console.log(`🔁 Dev proxy listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🔁 Dev proxy listening on http://0.0.0.0:${PORT}`);
+  console.log(`   Local access: http://localhost:${PORT}`);
+  console.log(`   Android emulator access: http://10.0.2.2:${PORT}`);
   console.log('Forwarding /api/data ->', UPSTREAM_DATA);
   console.log('Forwarding /api/auth ->', UPSTREAM_AUTH);
   console.log('Forwarding /api/plant ->', UPSTREAM_AUTH + '/plant');

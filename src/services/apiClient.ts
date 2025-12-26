@@ -16,13 +16,25 @@ const PROD_DATA_BASE_URL = 'https://lowcost-env.upd2vnf6k6.us-west-2.elasticbean
 
 // Get the dev machine IP from Expo's manifest
 // When using tunnel/LAN, Expo provides the hostUri
+// For web, ALWAYS use localhost since the browser runs on the same machine
 const getDevProxyBase = () => {
-  if (Constants.expoConfig?.hostUri) {
-    // Extract the IP from hostUri (format: "192.168.x.x:8081")
-    const host = Constants.expoConfig.hostUri.split(':')[0];
-    return `http://${host}:3001`;
+  // On web, always use localhost (browser is on dev machine)
+  if (Platform.OS === 'web') {
+    return 'http://localhost:3001';
   }
-  // Fallback to localhost for web or if hostUri not available
+
+  // On native with LAN/physical IP, use the network IP
+  if (Constants.expoConfig?.hostUri) {
+    const hostUri = Constants.expoConfig.hostUri;
+    // Skip if it's a tunnel hostname (contains .exp.direct)
+    if (!hostUri.includes('.exp.direct')) {
+      // Extract the IP from hostUri (format: "192.168.x.x:8081")
+      const host = hostUri.split(':')[0];
+      return `http://${host}:3001`;
+    }
+  }
+
+  // Fallback to localhost
   return 'http://localhost:3001';
 };
 
@@ -31,6 +43,7 @@ const devProxyBase = getDevProxyBase();
 // Local development proxy endpoints (HTTP allowed only in dev)
 const DEV_PROXY_AUTH = `${devProxyBase}/api/auth`;
 const DEV_PROXY_DATA = `${devProxyBase}/api/data`;
+const DEV_PROXY_MACHINES = `${devProxyBase}/api/machines`;
 
 // Check environment
 const isDevelopment = __DEV__;
@@ -59,7 +72,7 @@ if (isDevelopment) {
  */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: resolvedDataBase,
-  timeout: 30000,
+  timeout: 15000, // Reduced to 15 seconds
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -71,7 +84,7 @@ export const apiClient: AxiosInstance = axios.create({
  */
 export const authApiClient: AxiosInstance = axios.create({
   baseURL: resolvedAuthBase,
-  timeout: 30000,
+  timeout: 15000, // Reduced to 15 seconds
   headers: {
     'Content-Type': 'application/json',
   },

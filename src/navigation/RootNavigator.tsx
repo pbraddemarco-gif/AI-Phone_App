@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, TouchableOpacity, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
 import HomeScreen from '../screens/HomeScreen';
@@ -15,7 +15,8 @@ import { MachineShiftComparisonScreen } from '../screens/MachineShiftComparisonS
 import PlantLayoutScreen from '../screens/PlantLayoutScreen';
 import CustomerSelectorScreen from '../screens/CustomerSelectorScreen';
 import ProductionOrdersScreen from '../screens/ProductionOrdersScreen';
-import ActionsScreen from '../screens/ActionsScreen';
+import ActionsScreen2 from '../screens/ActionsScreen2';
+import ActionListScreen from '../screens/ActionListScreen';
 import ActionMachinePickerScreen from '../screens/ActionMachinePickerScreen';
 import ActionUserPickerScreen from '../screens/ActionUserPickerScreen';
 import { RootStackParamList } from '../types/navigation';
@@ -111,7 +112,37 @@ export default function RootNavigator() {
             component={ProductionOrdersScreen}
             options={{ title: 'Production Orders' }}
           />
-          <Stack.Screen name="Actions" component={ActionsScreen} options={{ title: 'Actions' }} />
+          <Stack.Screen
+            name="ActionList"
+            component={ActionListScreen}
+            options={{ title: 'Actions' }}
+          />
+          <Stack.Screen
+            name="Actions2"
+            component={ActionsScreen2}
+            options={({ route, navigation }) => ({
+              title: route.params?.actionId ? 'Edit Action' : 'Create Action',
+              headerRight: !route.params?.actionId
+                ? () => (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ActionList')}
+                      style={{ paddingRight: 16 }}
+                    >
+                      <Text
+                        style={{
+                          color: '#007AFF',
+                          fontSize: 16,
+                          fontWeight: '500',
+                          textDecorationLine: 'underline',
+                        }}
+                      >
+                        View Actions
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                : undefined,
+            })}
+          />
           <Stack.Screen
             name="ActionMachinePicker"
             component={ActionMachinePickerScreen}

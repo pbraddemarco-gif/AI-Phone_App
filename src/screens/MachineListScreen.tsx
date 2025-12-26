@@ -810,15 +810,8 @@ const MachineListScreen: React.FC<MachineListProps> = ({ navigation }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.plantLayoutButton}
-              onPress={() =>
-                navigation.navigate('Actions', {
-                  customerId: selectedCustomer?.Id,
-                  customerName: selectedCustomer?.Name,
-                  plantId: selectedCustomer?.Id,
-                  plantName: selectedCustomer?.DisplayName,
-                })
-              }
-              accessibilityLabel="Create or view actions"
+              onPress={() => navigation.navigate('Actions2')}
+              accessibilityLabel="Create action"
             >
               <Text style={styles.plantLayoutIcon}>📝</Text>
             </TouchableOpacity>

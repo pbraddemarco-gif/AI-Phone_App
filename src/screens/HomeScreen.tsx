@@ -23,6 +23,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         label="Go to Details"
         onPress={() => navigation.navigate('Details', { itemId: '123' })}
       />
+      <CommonButton label="Actions 2.0" onPress={() => navigation.navigate('Actions2')} />
     </ScreenContainer>
   );
 }
