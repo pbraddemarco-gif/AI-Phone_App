@@ -1,4 +1,8 @@
 import { authApiClient } from './apiClient';
+import { getCurrentUsername, getDevToken } from './tokenStorage';
+import axios from 'axios';
+
+const DEV_API_BASE_URL = 'https://dev1.automationintellect.com/api';
 
 export interface ActionPayload {
   TypeId: number;
@@ -91,11 +95,33 @@ export interface ActionListFilters {
 
 /**
  * Fetch all available action statuses
+ * For testuserapp, uses dev server; otherwise uses production server
  */
 export async function fetchActionStatuses(): Promise<ActionStatus[]> {
   try {
-    const response = await authApiClient.get<ActionStatus[]>('/taskdocuments/statuses');
-    return response.data || [];
+    const username = await getCurrentUsername();
+    const isTestUser = username?.toLowerCase().includes('testuserapp');
+
+    if (isTestUser) {
+      const devToken = await getDevToken();
+      if (!devToken) {
+        throw new Error('Dev token not available for testuserapp');
+      }
+
+      const response = await axios.get<ActionStatus[]>(
+        `${DEV_API_BASE_URL}/taskdocuments/statuses`,
+        {
+          headers: {
+            Authorization: `Bearer ${devToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data || [];
+    } else {
+      const response = await authApiClient.get<ActionStatus[]>('/taskdocuments/statuses');
+      return response.data || [];
+    }
   } catch (error: any) {
     if (__DEV__) {
       console.debug('❌ Failed to fetch action statuses:', error?.message || error);
@@ -106,11 +132,33 @@ export async function fetchActionStatuses(): Promise<ActionStatus[]> {
 
 /**
  * Fetch all available action labels for a client
+ * For testuserapp, uses dev server; otherwise uses production server
  */
 export async function fetchActionLabels(clientId: number): Promise<ActionLabel[]> {
   try {
-    const response = await authApiClient.get<ActionLabel[]>(`/clients/${clientId}/tasklabels`);
-    return response.data || [];
+    const username = await getCurrentUsername();
+    const isTestUser = username?.toLowerCase().includes('testuserapp');
+
+    if (isTestUser) {
+      const devToken = await getDevToken();
+      if (!devToken) {
+        throw new Error('Dev token not available for testuserapp');
+      }
+
+      const response = await axios.get<ActionLabel[]>(
+        `${DEV_API_BASE_URL}/clients/${clientId}/tasklabels`,
+        {
+          headers: {
+            Authorization: `Bearer ${devToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data || [];
+    } else {
+      const response = await authApiClient.get<ActionLabel[]>(`/clients/${clientId}/tasklabels`);
+      return response.data || [];
+    }
   } catch (error: any) {
     if (__DEV__) {
       console.debug('❌ Failed to fetch action labels:', error?.message || error);
@@ -121,6 +169,7 @@ export async function fetchActionLabels(clientId: number): Promise<ActionLabel[]
 
 /**
  * Fetch actions with optional filtering
+ * For testuserapp, uses dev server; otherwise uses production server
  */
 export async function fetchActions(
   machineId: number,
@@ -138,14 +187,35 @@ export async function fetchActions(
       ...(filters.filter && { filter: filters.filter }),
     };
 
-    const response = await authApiClient.get<ActionListResponse>(
-      `/machines/${machineId}/taskdocuments`,
-      {
-        params,
-      }
-    );
+    const username = await getCurrentUsername();
+    const isTestUser = username?.toLowerCase().includes('testuserapp');
 
-    return response.data || { Items: [], TotalCount: 0 };
+    if (isTestUser) {
+      const devToken = await getDevToken();
+      if (!devToken) {
+        throw new Error('Dev token not available for testuserapp');
+      }
+
+      const response = await axios.get<ActionListResponse>(
+        `${DEV_API_BASE_URL}/machines/${machineId}/taskdocuments`,
+        {
+          params,
+          headers: {
+            Authorization: `Bearer ${devToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data || { Items: [], TotalCount: 0 };
+    } else {
+      const response = await authApiClient.get<ActionListResponse>(
+        `/machines/${machineId}/taskdocuments`,
+        {
+          params,
+        }
+      );
+      return response.data || { Items: [], TotalCount: 0 };
+    }
   } catch (error: any) {
     if (__DEV__) {
       console.debug('❌ Failed to fetch actions:', error?.message || error);
@@ -156,11 +226,33 @@ export async function fetchActions(
 
 /**
  * Fetch a single action's full details by ID
+ * For testuserapp, uses dev server; otherwise uses production server
  */
 export async function fetchActionDetails(actionId: number): Promise<ActionPayload | null> {
   try {
-    const response = await authApiClient.get<ActionPayload>(`/taskdocuments/${actionId}`);
-    return response.data || null;
+    const username = await getCurrentUsername();
+    const isTestUser = username?.toLowerCase().includes('testuserapp');
+
+    if (isTestUser) {
+      const devToken = await getDevToken();
+      if (!devToken) {
+        throw new Error('Dev token not available for testuserapp');
+      }
+
+      const response = await axios.get<ActionPayload>(
+        `${DEV_API_BASE_URL}/taskdocuments/${actionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${devToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data || null;
+    } else {
+      const response = await authApiClient.get<ActionPayload>(`/taskdocuments/${actionId}`);
+      return response.data || null;
+    }
   } catch (error: any) {
     if (__DEV__) {
       console.debug('❌ Failed to fetch action details:', error?.message || error);
@@ -169,22 +261,60 @@ export async function fetchActionDetails(actionId: number): Promise<ActionPayloa
   }
 }
 
+/**
+ * Save new action
+ * For testuserapp, uses dev server; otherwise uses production server
+ */
 export async function saveAction(machineId: number, payload: ActionPayload): Promise<any> {
   try {
-    if (__DEV__) {
-      console.debug('📤 Saving action to API:', {
-        endpoint: `/machines/${machineId}/taskdocuments`,
+    const username = await getCurrentUsername();
+    const isTestUser = username?.toLowerCase().includes('testuserapp');
+
+    if (isTestUser) {
+      const devToken = await getDevToken();
+      if (!devToken) {
+        throw new Error('Dev token not available for testuserapp');
+      }
+
+      if (__DEV__) {
+        console.debug('📤 Saving action to dev server:', {
+          endpoint: `${DEV_API_BASE_URL}/machines/${machineId}/taskdocuments`,
+          payload,
+        });
+      }
+
+      const response = await axios.post(
+        `${DEV_API_BASE_URL}/machines/${machineId}/taskdocuments`,
         payload,
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${devToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (__DEV__) {
+        console.debug('✅ Action saved successfully to dev server:', response.data);
+      }
+
+      return response;
+    } else {
+      if (__DEV__) {
+        console.debug('📤 Saving action to production server:', {
+          endpoint: `/machines/${machineId}/taskdocuments`,
+          payload,
+        });
+      }
+
+      const response = await authApiClient.post(`/machines/${machineId}/taskdocuments`, payload);
+
+      if (__DEV__) {
+        console.debug('✅ Action saved successfully to production server:', response.data);
+      }
+
+      return response;
     }
-
-    const response = await authApiClient.post(`/machines/${machineId}/taskdocuments`, payload);
-
-    if (__DEV__) {
-      console.debug('✅ Action saved successfully:', response);
-    }
-
-    return response;
   } catch (error: any) {
     if (__DEV__) {
       console.debug('❌ Failed to save action:', error?.message || error);
@@ -193,22 +323,56 @@ export async function saveAction(machineId: number, payload: ActionPayload): Pro
   }
 }
 
+/**
+ * Update existing action
+ * For testuserapp, uses dev server; otherwise uses production server
+ */
 export async function updateAction(actionId: number, payload: ActionPayload): Promise<any> {
   try {
-    if (__DEV__) {
-      console.debug('📤 Updating action via API:', {
-        endpoint: `/taskdocuments/${actionId}`,
-        payload,
+    const username = await getCurrentUsername();
+    const isTestUser = username?.toLowerCase().includes('testuserapp');
+
+    if (isTestUser) {
+      const devToken = await getDevToken();
+      if (!devToken) {
+        throw new Error('Dev token not available for testuserapp');
+      }
+
+      if (__DEV__) {
+        console.debug('📤 Updating action on dev server:', {
+          endpoint: `${DEV_API_BASE_URL}/taskdocuments/${actionId}`,
+          payload,
+        });
+      }
+
+      const response = await axios.put(`${DEV_API_BASE_URL}/taskdocuments/${actionId}`, payload, {
+        headers: {
+          Authorization: `Bearer ${devToken}`,
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (__DEV__) {
+        console.debug('✅ Action updated successfully on dev server:', response.data);
+      }
+
+      return response;
+    } else {
+      if (__DEV__) {
+        console.debug('📤 Updating action on production server:', {
+          endpoint: `/taskdocuments/${actionId}`,
+          payload,
+        });
+      }
+
+      const response = await authApiClient.put(`/taskdocuments/${actionId}`, payload);
+
+      if (__DEV__) {
+        console.debug('✅ Action updated successfully on production server:', response.data);
+      }
+
+      return response;
     }
-
-    const response = await authApiClient.put(`/taskdocuments/${actionId}`, payload);
-
-    if (__DEV__) {
-      console.debug('✅ Action updated successfully:', response);
-    }
-
-    return response;
   } catch (error: any) {
     if (__DEV__) {
       console.debug('❌ Failed to update action:', error?.message || error);

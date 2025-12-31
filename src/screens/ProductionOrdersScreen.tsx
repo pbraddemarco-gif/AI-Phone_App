@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useProductionOrders } from '../hooks/useProductionOrders';
 import { getSelectedCustomer } from '../services/customerStorage';
 import { ProductionOrder } from '../types/productionOrder';
 import { getMachineNameMap } from '../services/machineService';
+import { BackHandler } from 'react-native';
 
 export type ProductionOrdersProps = NativeStackScreenProps<RootStackParamList, 'ProductionOrders'>;
 
@@ -141,6 +142,15 @@ const ProductionOrdersScreen: React.FC<ProductionOrdersProps> = ({ navigation })
     });
     return sorted;
   }, [filteredOrders, sortBy, sortDirection, machineNames]);
+
+  // Ensure back returns to MachineList even while loading
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigation.navigate('MachineList');
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigation]);
 
   // Load client ID on mount
   React.useEffect(() => {

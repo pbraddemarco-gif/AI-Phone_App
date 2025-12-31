@@ -75,6 +75,8 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator
       key={isAuthenticated ? 'authenticated' : 'unauthenticated'}
+      // Keep inactive screens mounted to avoid native/JS stack mismatches during hot reloads
+      detachInactiveScreens={false}
       screenOptions={{ headerShown: true }}
       initialRouteName={isAuthenticated ? 'CustomerSelector' : 'Auth'}
     >
@@ -126,7 +128,7 @@ export default function RootNavigator() {
                 ? () => (
                     <TouchableOpacity
                       onPress={() => navigation.navigate('ActionList')}
-                      style={{ paddingRight: 16 }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Text
                         style={{
@@ -134,13 +136,31 @@ export default function RootNavigator() {
                           fontSize: 16,
                           fontWeight: '500',
                           textDecorationLine: 'underline',
+                          paddingRight: 0,
                         }}
                       >
                         View Actions
                       </Text>
                     </TouchableOpacity>
                   )
-                : undefined,
+                : () => (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ActionList')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text
+                        style={{
+                          color: '#007AFF',
+                          fontSize: 16,
+                          fontWeight: '500',
+                          textDecorationLine: 'underline',
+                          paddingRight: 0,
+                        }}
+                      >
+                        View Actions
+                      </Text>
+                    </TouchableOpacity>
+                  ),
             })}
           />
           <Stack.Screen

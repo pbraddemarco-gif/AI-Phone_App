@@ -29,9 +29,9 @@ Start-Sleep -Seconds 3
 # Verify proxy is running
 $proxyRunning = Test-NetConnection -ComputerName localhost -Port 3001 -InformationLevel Quiet -WarningAction SilentlyContinue
 if ($proxyRunning) {
-    Write-Host "✓ Proxy server running" -ForegroundColor Green
+    Write-Host "Proxy server running" -ForegroundColor Green
 } else {
-    Write-Host "✗ Proxy server failed to start" -ForegroundColor Red
+    Write-Host "Proxy server failed to start" -ForegroundColor Red
     Write-Host "Check the proxy window for errors" -ForegroundColor Yellow
     exit 1
 }
@@ -43,8 +43,3 @@ Write-Host ""
 # Start Expo
 $env:EXPO_NO_INTERACTIVE = '1'
 npx expo start
-
-# This keeps the window open if Expo exits
-Write-Host ""
-Write-Host "Expo has stopped. Press any key to exit..." -ForegroundColor Yellow
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

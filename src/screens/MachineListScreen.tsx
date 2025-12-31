@@ -1104,8 +1104,7 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '600',
     textAlign: 'center',
-    lineHeight: 24,
-    marginTop: -5,
+    lineHeight: 28,
   },
   clientTitle: {
     fontSize: 22,

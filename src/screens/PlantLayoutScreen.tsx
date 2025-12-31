@@ -23,6 +23,7 @@ import { RootStackParamList } from '../types/navigation';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { getMachinePerformance } from '../services/machinePerformanceService';
 import { productionService } from '../services/productionService';
+import { BackHandler } from 'react-native';
 
 export type PlantLayoutProps = NativeStackScreenProps<RootStackParamList, 'PlantLayout'>;
 
@@ -77,6 +78,15 @@ const PlantLayoutScreen: React.FC<PlantLayoutProps> = ({ navigation, route }) =>
       title: machineName ? `Plant Layout (${machineName})` : 'Plant Layout',
     });
   }, [navigation, machineName]);
+
+  // Ensure back always returns to MachineList, even during loading
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigation.navigate('MachineList');
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigation]);
 
   useEffect(() => {
     fetchPlantLayout();

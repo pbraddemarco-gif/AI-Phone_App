@@ -387,24 +387,14 @@ export default function ActionListScreen({ navigation, route }: ActionListScreen
     }
   }, [isFocused, route, navigation, loadActions]);
 
-  // Override back: from ActionList go to MachineList
+  // Override back: return to Actions2 (create mode) if that's where we came from, else MachineList
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (__DEV__) console.debug('🔙 Hardware back on ActionList — navigating to MachineList');
-      navigation.navigate('MachineList');
-      return true;
+      if (__DEV__) console.debug('🔙 Hardware back on ActionList -> Actions2');
+      navigation.navigate('Actions2');
+      return true; // prevent default
     });
     return () => backHandler.remove();
-  }, [navigation]);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      // Prevent default back
-      e.preventDefault();
-      if (__DEV__) console.debug('🔙 Header back on ActionList — navigating to MachineList');
-      navigation.navigate('MachineList');
-    });
-    return unsubscribe;
   }, [navigation]);
 
   // When machines load after first render, trigger a background load
@@ -458,6 +448,7 @@ export default function ActionListScreen({ navigation, route }: ActionListScreen
           navigation.navigate('Actions2', {
             actionId: item.Id,
             actionData: item,
+            fromActionList: true,
           });
         }}
       >

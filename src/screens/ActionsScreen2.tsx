@@ -329,11 +329,16 @@ export default function ActionsScreen2({ navigation, route }: ActionsScreen2Prop
     };
   }, []);
 
-  // Override hardware back: go to ActionList in edit mode, MachineList otherwise
+  // Override hardware back: if we came from ActionList, go back there; else MachineList
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (__DEV__) console.debug('🔙 Hardware back pressed (isEditMode=%s)', String(isEditMode));
-      if (isEditMode) {
+      const cameFromActionList = route.params?.fromActionList === true;
+      if (__DEV__)
+        console.debug(
+          '🔙 Hardware back on Actions2 (fromActionList=%s)',
+          String(cameFromActionList)
+        );
+      if (cameFromActionList) {
         navigation.navigate('ActionList');
       } else {
         navigation.navigate('MachineList');
@@ -344,21 +349,8 @@ export default function ActionsScreen2({ navigation, route }: ActionsScreen2Prop
     return () => backHandler.remove();
   }, [navigation, isEditMode]);
 
-  // Intercept header back: route to ActionList when editing, MachineList otherwise
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      // Prevent the default back action
-      e.preventDefault();
-      if (__DEV__) console.debug('🔙 beforeRemove intercept (isEditMode=%s)', String(isEditMode));
-      if (isEditMode) {
-        navigation.navigate('ActionList');
-      } else {
-        navigation.navigate('MachineList');
-      }
-    });
-
-    return unsubscribe;
-  }, [navigation, isEditMode]);
+  // NOTE: Avoid preventing native removals; intercepting beforeRemove on native-stack can desync
+  // native/JS state and trigger "screen removed natively" errors. Hardware back is handled above.
 
   // Debug: Track assigned users changes
   useEffect(() => {
